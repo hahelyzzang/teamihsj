@@ -14,7 +14,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
@@ -225,7 +225,7 @@ public final class PigCommands {
     }
 
     private static Optional<Pig> findNearestPig(ServerPlayer player, double radius) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         AABB box = player.getBoundingBox().inflate(radius);
         List<Pig> pigs = level.getEntitiesOfClass(Pig.class, box);
         return pigs.stream()
@@ -250,7 +250,7 @@ public final class PigCommands {
      * @param isInternalEvent true when triggered by a player action (not chat) - skips confusion shortcut
      */
     private static void speak(ServerPlayer player, PigCompanion companion, String playerMessage, boolean isInternalEvent) {
-        final MinecraftServer server = player.server;
+        final MinecraftServer server = player.level().getServer();
 
         // Confusion shortcut: just re-show the previous Korean line. Does NOT call the LLM.
         if (!isInternalEvent

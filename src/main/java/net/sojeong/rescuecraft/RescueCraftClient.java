@@ -25,7 +25,7 @@ public class RescueCraftClient implements ClientModInitializer {
                 waitingForIdentityAnswer = true;
 
                 client.player.sendSystemMessage(
-                        Component.literal("[RescueCraft] Who are you?")
+                        Component.literal("[RescueCraft] Who am I in this story?")
                 );
 
                 client.player.sendSystemMessage(
@@ -75,9 +75,9 @@ public class RescueCraftClient implements ClientModInitializer {
                                 Component.literal("[RescueCraft] Your English level is: " + level)
                         );
 
-                        client.player.sendSystemMessage(
-                                Component.literal("[RescueCraft] Thank you. Your journey begins now.")
-                        );
+//                        client.player.sendSystemMessage(
+//                                Component.literal("[RescueCraft] Thank you. Your journey begins now.")
+//                        );
                     });
                 }, "RescueCraft-Ollama-Evaluator").start();
 

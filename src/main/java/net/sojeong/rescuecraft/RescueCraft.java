@@ -63,37 +63,33 @@ public class RescueCraft implements ModInitializer {
                 0,
                 List.of(
                         Filterable.passThrough(Component.literal("""
-                                The old city is silent.
-
-                                The streets are broken.
-                                The zoo has been abandoned.
-
-                                But some animals are still waiting for help.
+                                20XX.09.08
+                                
+                                The world as I knew it is gone.
+                                WWIII struck without warning, and everyone I knew... is gone.
                                 """)),
 
                         Filterable.passThrough(Component.literal("""
-                                You are not here to conquer this world.
-
-                                You are here to listen, learn, and help.
-
-                                The animals may speak to you if you are willing to understand them.
+                                20XX.09.30
+                                
+                                It was not just the people I knew.
+                                It was everyone.
+                                Weeks have passed, and I have not seen a single living soul.
+                                I truly believe I may be the last person alive.
                                 """)),
 
                         Filterable.passThrough(Component.literal("""
-                                Language is your bridge.
-
-                                Through English, you will ask questions, understand needs, and rebuild trust.
-
-                                Do not worry if your English is not perfect.
+                                20XX.10.05
+                                
+                                Today, I found something impossible.
+                                While climbing a mountain to search the horizon, I spotted what looked like a zoo in the distance. Using my binoculars, I swear I saw movement inside.
                                 """)),
 
                         Filterable.passThrough(Component.literal("""
-                                Before your journey begins...
-
-                                Who are you?
-
-                                Your answer will help RescueCraft adjust future conversations to your English level.
+                                Animals… maybe even survivors.
+                                I do not know what is waiting for me there, but for the first time in weeks, I feel hope.
                                 """)),
+
 
                         Filterable.passThrough(Component.literal("""
                                 When you meet an animal:
