@@ -15,6 +15,12 @@ public class RescueCraftClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        try {
+            WorldTemplateInstaller.installWorldTemplate();
+        } catch (Exception e) {
+            System.err.println("[RescueCraft] World template install failed, but game will continue.");
+            e.printStackTrace();
+        }
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.level == null) {
                 return;
