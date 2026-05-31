@@ -28,6 +28,7 @@ public class RescueCraft implements ModInitializer {
         LOGGER.info("RescueCraft initialized!");
         // Register the /rcpig command tree (pig NPC dialogue prototype).
         PigCommands.register();
+        HungryAnimalParticles.register();
     }
 
     public static void giveFieldJournal(ServerPlayer player) {

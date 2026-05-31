@@ -1,4 +1,5 @@
 package net.sojeong.rescuecraft.pig;
+import net.sojeong.rescuecraft.HungryAnimalParticles;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -122,6 +123,7 @@ public final class PigCommands {
         if (trustChanged) {
             sendTrustUpdate(player, "SCARED", "TRUSTING");
         }
+
         speak(player, companion, "(The player just gave you food. You are no longer hungry.)", true);
         return 1;
     }
