@@ -89,10 +89,22 @@ public final class HungryAnimalParticles {
     }
 
     private static Item getBubbleItemForAnimal(Animal animal) {
-        // 범용 구조 동물(소/닭/토끼/말): 무리에게 줄 먹이가 충분해질 때까지 음식 말풍선 표시
+        // 범용 구조 동물(소/닭/토끼/말/아홀로틀/거북/고양이):
+        // 무리에게 줄 먹이/물이 충분해질 때까지 말풍선 표시
         AnimalCompanion rescued = AnimalCompanion.get(animal.getUUID());
         if (rescued != null) {
-            return rescued.isHerdSatisfied() ? null : Items.STICK; // food_bubble
+            boolean needFood = rescued.stillNeedsFood();
+            boolean needWater = rescued.stillNeedsWater();
+            if (needFood && needWater) {
+                return Items.PAPER;   // foodwater_bubble
+            }
+            if (needFood) {
+                return Items.STICK;   // food_bubble
+            }
+            if (needWater) {
+                return Items.STRING;  // water_bubble
+            }
+            return null;
         }
 
         PigCompanion companion = PigCompanion.getActive();

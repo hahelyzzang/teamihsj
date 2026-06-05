@@ -53,7 +53,7 @@ public final class AnimalPrompt {
                 - Your name is %s. You are %s.
                 - You lived your whole life inside a zoo. The zoo was abandoned after a war.
                 - You are hungry and afraid, and you do not know how to find food in the wild.
-                - The ONE food you long for is: %s.
+                - The food you long for is: %s.%s
                 - You and your herd survived together. You care about feeding all of them, not just yourself.
                 - You are gentle, shy, and child-friendly. You speak in a soft, simple voice.
                 - You sometimes make small animal sounds in *asterisks* (e.g. *moo*, *cluck*, *sniff*).
@@ -88,10 +88,11 @@ public final class AnimalPrompt {
                 """.formatted(
                 companion.getName(),
                 species.personality(),
-                species.itemDisplayName(),
+                species.foodDisplayName(),
+                species.needsWater() ? " You also need fresh water." : "",
                 companion.getTrust().name(),
                 companion.getTrust().describeForPrompt(),
-                species.itemDisplayName(),
+                species.foodDisplayName(),
                 levelRule
         );
     }
@@ -102,11 +103,14 @@ public final class AnimalPrompt {
         context.append("Animal state:\n");
         context.append("- name: ").append(companion.getName()).append("\n");
         context.append("- trust: ").append(companion.getTrust().name()).append("\n");
-        context.append("- food it wants: ").append(species.itemDisplayName()).append("\n");
-        context.append("- food items received so far: ").append(companion.getItemsGiven()).append("\n");
+        context.append("- food it wants: ").append(species.foodDisplayName()).append("\n");
+        if (species.needsWater()) {
+            context.append("- has water: ").append(companion.isWatered()).append("\n");
+        }
+        context.append("- food items received so far: ").append(companion.getFoodGiven()).append("\n");
         if (companion.getHerdNeed() > 0) {
             context.append("- total food the herd still needs: ")
-                    .append(companion.getItemsRemaining()).append("\n");
+                    .append(companion.getFoodRemaining()).append("\n");
         }
         context.append("- first encounter happened: ").append(companion.isFirstEncounterDone()).append("\n");
         if (!companion.getLastEnglish().isBlank()) {
@@ -127,7 +131,7 @@ public final class AnimalPrompt {
      */
     public static String firstEncounterPlayerMessage(AnimalSpecies species) {
         return "(The player approaches your broken cage for the first time. You are starving. "
-                + "Introduce yourself shyly and beg for " + species.itemDisplayName() + ".)";
+                + "Introduce yourself shyly and beg for " + species.foodDisplayName() + ".)";
     }
 
     /** Maps the stored CEFR level (A1..C2) onto the BEGINNER/INTERMEDIATE/ADVANCED band. */

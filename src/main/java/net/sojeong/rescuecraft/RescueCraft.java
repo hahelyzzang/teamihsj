@@ -96,27 +96,51 @@ public class RescueCraft implements ModInitializer {
 
 
                         Filterable.passThrough(Component.literal("""
-                                The pig, Bori:
-                                  /rcpig adopt     - befriend the pig in front of you
-                                  /rcpig talk ...  - speak to the pig
-                                  /rcpig feed      - feed a carrot / potato / beetroot
-                                  /rcpig water     - give water (hold a water bucket)
-                                  /rcpig habitat   - declare a safe barn pen is built
-                                  /rcpig release   - lead the pig to her new home
-                                  /rcpig status    - check the pig's trust state
+                                How to help an animal
+
+                                RIGHT-CLICK an animal to befriend it.
+                                Then RIGHT-CLICK it again while holding:
+                                 - its food  -> you feed it
+                                 - a water bucket -> you give water
+
+                                To TALK, just type in chat while standing
+                                next to it. (Type ! first to chat normally.)
                                 """)),
 
                         Filterable.passThrough(Component.literal("""
-                                The other animals (cow, chicken, rabbit, horse):
-                                  /rcanimal adopt  - befriend the animal in front of you
-                                  /rcanimal talk ..- speak to the animal
-                                  /rcanimal give   - give the food it is asking for
-                                  /rcanimal status - check its herd's food need
+                                What each animal wants
 
-                                Each animal wants ONE special food. Find it in the
-                                village chests, bring it back, and the animal will
-                                teach you how to grow more - then ask for enough
-                                for its whole herd.
+                                Land animals need WATER + crops:
+                                 - Cow: wheat / beetroot
+                                 - Chicken: wheat & beetroot seeds
+                                 - Rabbit: carrots / dandelions
+                                 - Horse: apples / wheat / sugar
+
+                                Water animals & the cat need FISH you catch
+                                with a fishing rod:
+                                 - Axolotl, Turtle, Cat
+                                """)),
+
+                        Filterable.passThrough(Component.literal("""
+                                The plan
+
+                                Find seeds, crops and buckets in the village
+                                chests. Bring an animal its food and it will
+                                teach you how to grow or catch more - then ask
+                                for enough for its WHOLE herd (each animal needs
+                                a few, so a herd needs many).
+                                """)),
+
+                        Filterable.passThrough(Component.literal("""
+                                Backup commands (if needed)
+
+                                Bori the pig:
+                                  /rcpig adopt | talk | feed | water
+                                  /rcpig habitat | release | status
+
+                                Other animals:
+                                  /rcanimal adopt | talk | give
+                                  /rcanimal water | status
                                 """))
                 ),
                 true
