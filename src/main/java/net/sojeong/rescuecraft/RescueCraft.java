@@ -8,6 +8,7 @@ import net.minecraft.server.network.Filterable;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.WrittenBookContent;
+import net.sojeong.rescuecraft.animal.AnimalCommands;
 import net.sojeong.rescuecraft.pig.PigCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,8 @@ public class RescueCraft implements ModInitializer {
         LOGGER.info("RescueCraft initialized!");
         // Register the /rcpig command tree (pig NPC dialogue prototype).
         PigCommands.register();
+        // Register the /rcanimal command tree (cow, chicken, rabbit, horse NPCs).
+        AnimalCommands.register();
         HungryAnimalParticles.register();
     }
 
@@ -93,7 +96,7 @@ public class RescueCraft implements ModInitializer {
 
 
                         Filterable.passThrough(Component.literal("""
-                                When you meet an animal:
+                                The pig, Bori:
                                   /rcpig adopt     - befriend the pig in front of you
                                   /rcpig talk ...  - speak to the pig
                                   /rcpig feed      - feed a carrot / potato / beetroot
@@ -101,6 +104,19 @@ public class RescueCraft implements ModInitializer {
                                   /rcpig habitat   - declare a safe barn pen is built
                                   /rcpig release   - lead the pig to her new home
                                   /rcpig status    - check the pig's trust state
+                                """)),
+
+                        Filterable.passThrough(Component.literal("""
+                                The other animals (cow, chicken, rabbit, horse):
+                                  /rcanimal adopt  - befriend the animal in front of you
+                                  /rcanimal talk ..- speak to the animal
+                                  /rcanimal give   - give the food it is asking for
+                                  /rcanimal status - check its herd's food need
+
+                                Each animal wants ONE special food. Find it in the
+                                village chests, bring it back, and the animal will
+                                teach you how to grow more - then ask for enough
+                                for its whole herd.
                                 """))
                 ),
                 true

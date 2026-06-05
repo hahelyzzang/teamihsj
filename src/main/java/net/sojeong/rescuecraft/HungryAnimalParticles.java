@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
+import net.sojeong.rescuecraft.animal.AnimalCompanion;
 import net.sojeong.rescuecraft.pig.PigCompanion;
 
 import java.util.HashMap;
@@ -88,6 +89,12 @@ public final class HungryAnimalParticles {
     }
 
     private static Item getBubbleItemForAnimal(Animal animal) {
+        // 범용 구조 동물(소/닭/토끼/말): 무리에게 줄 먹이가 충분해질 때까지 음식 말풍선 표시
+        AnimalCompanion rescued = AnimalCompanion.get(animal.getUUID());
+        if (rescued != null) {
+            return rescued.isHerdSatisfied() ? null : Items.STICK; // food_bubble
+        }
+
         PigCompanion companion = PigCompanion.getActive();
 
         // 아직 Bori가 등록되지 않았으면 아무 말풍선도 표시하지 않음
