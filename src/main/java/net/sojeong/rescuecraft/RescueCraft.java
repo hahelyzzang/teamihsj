@@ -111,6 +111,7 @@ public class RescueCraft implements ModInitializer {
                                 What each animal wants
 
                                 Land animals need WATER + crops:
+                                 - Bori (pig): carrots/potatoes/beetroots
                                  - Cow: wheat / beetroot
                                  - Chicken: wheat & beetroot seeds
                                  - Rabbit: carrots / dandelions
@@ -129,18 +130,18 @@ public class RescueCraft implements ModInitializer {
                                 teach you how to grow or catch more - then ask
                                 for enough for its WHOLE herd (each animal needs
                                 a few, so a herd needs many).
+
+                                Right-click an animal any time to hear again
+                                what it needs, how many, and where to find it.
                                 """)),
 
                         Filterable.passThrough(Component.literal("""
                                 Backup commands (if needed)
 
-                                Bori the pig:
-                                  /rcpig adopt | talk | feed | water
-                                  /rcpig habitat | release | status
-
-                                Other animals:
-                                  /rcanimal adopt | talk | give
-                                  /rcanimal water | status
+                                Works for every animal, including Bori:
+                                  /rcanimal interact
+                                  /rcanimal talk <message>
+                                  /rcanimal give | water | status
                                 """))
                 ),
                 true

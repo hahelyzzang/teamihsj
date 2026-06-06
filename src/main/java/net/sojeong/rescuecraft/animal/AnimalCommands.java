@@ -27,13 +27,15 @@ import java.util.Optional;
 
 /**
  * Registers and implements the /rcanimal command tree for the rescued
- * conversational animals (cow, chicken, rabbit, horse, axolotl, turtle, cat).
+ * conversational animals (pig, cow, chicken, rabbit, horse, axolotl, turtle, cat).
  *
- * Players normally never type these commands: right-clicking an animal and
- * typing in chat next to it are translated into these commands by the client
- * (see RescueCraftClient). The commands remain available as a documented backup.
+ * Players normally never type these commands: right-clicking an animal sends
+ * {@code /rcanimal interact} and typing in chat next to it sends
+ * {@code /rcanimal talk} (see RescueCraftClient). The commands stay available as
+ * a documented backup.
  *
  * Subcommands:
+ *   /rcanimal interact          - befriend, or feed/water with the held item, or greet
  *   /rcanimal adopt             - befriend the nearest supported animal
  *   /rcanimal talk <message...> - speak to the nearest befriended animal
  *   /rcanimal give              - give one accepted food item (crops or fish)
@@ -42,10 +44,10 @@ import java.util.Optional;
  */
 public final class AnimalCommands {
 
-    /** How close the player must stand to adopt an animal. */
-    private static final double ADOPT_RADIUS = 6.0;
+    /** How close the player must stand to adopt / interact with an animal. */
+    private static final double INTERACT_RADIUS = 6.0;
     /** How close a befriended animal must be for talk/give/water/status to target it. */
-    private static final double INTERACT_RADIUS = 8.0;
+    private static final double TARGET_RADIUS = 8.0;
     /** Radius used to count an animal's herd (same species nearby). */
     private static final double HERD_RADIUS = 48.0;
 
@@ -59,6 +61,7 @@ public final class AnimalCommands {
     private static void registerInternal(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
                 Commands.literal("rcanimal")
+                        .then(Commands.literal("interact").executes(AnimalCommands::cmdInteract))
                         .then(Commands.literal("adopt").executes(AnimalCommands::cmdAdopt))
                         .then(Commands.literal("talk")
                                 .then(Commands.argument("message", StringArgumentType.greedyString())
@@ -69,48 +72,91 @@ public final class AnimalCommands {
         );
     }
 
+    // ----- interact (right-click) -----
+
+    private static int cmdInteract(CommandContext<CommandSourceStack> ctx) {
+        ServerPlayer player = playerOrNull(ctx);
+        if (player == null) return 0;
+
+        Optional<Animal> nearest = findNearestSupportedAnimal(player, INTERACT_RADIUS);
+        if (nearest.isEmpty()) {
+            sendError(player, "Stand closer to an animal to help it.");
+            return 0;
+        }
+        Animal animal = nearest.get();
+        AnimalSpecies species = AnimalSpecies.forEntity(animal);
+        if (species == null) {
+            return 0;
+        }
+
+        AnimalCompanion companion = AnimalCompanion.get(animal.getUUID());
+        if (companion == null) {
+            befriend(player, animal, species);
+            return 1;
+        }
+        // Already befriended: act on whatever the player is holding.
+        AnimalCompanion.getOrCreate(animal.getUUID(), species, companion.getName()); // refocus
+        ItemStack held = player.getMainHandItem();
+        if (species.accepts(held)) {
+            giveFood(player, companion);
+            return 1;
+        }
+        if (species.needsWater() && held.is(Items.WATER_BUCKET)) {
+            giveWater(player, companion);
+            return 1;
+        }
+        // Empty hand / other item: greet, and always remind what is needed.
+        speak(player, companion, "(The player gently greets you and asks how they can help.)", true);
+        showInstruction(player, companion);
+        return 1;
+    }
+
     // ----- adopt -----
 
     private static int cmdAdopt(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = playerOrNull(ctx);
         if (player == null) return 0;
 
-        Optional<Animal> nearest = findNearestSupportedAnimal(player, ADOPT_RADIUS);
+        Optional<Animal> nearest = findNearestSupportedAnimal(player, INTERACT_RADIUS);
         if (nearest.isEmpty()) {
-            sendError(player, "No rescuable animal within " + (int) ADOPT_RADIUS
-                    + " blocks. Stand next to a cow, chicken, rabbit, horse, axolotl, turtle, or cat.");
+            sendError(player, "No rescuable animal within " + (int) INTERACT_RADIUS
+                    + " blocks. Stand next to a pig, cow, chicken, rabbit, horse, axolotl, turtle, or cat.");
             return 0;
         }
-
         Animal animal = nearest.get();
         AnimalSpecies species = AnimalSpecies.forEntity(animal);
         if (species == null) {
             sendError(player, "That animal cannot be rescued yet.");
             return 0;
         }
-
         AnimalCompanion existing = AnimalCompanion.get(animal.getUUID());
         if (existing != null) {
-            // Already befriended: just make it the active focus again.
             AnimalCompanion.getOrCreate(animal.getUUID(), species, existing.getName());
-            sendInfo(player, existing.getName() + " is already your friend. (right-click to feed, type in chat to talk)");
+            sendInfo(player, existing.getName() + " is already your friend.");
+            showInstruction(player, existing);
             return 1;
         }
+        befriend(player, animal, species);
+        return 1;
+    }
 
+    /** Names the animal, creates its companion, counts its herd, greets, and shows the quest. */
+    private static void befriend(ServerPlayer player, Animal animal, AnimalSpecies species) {
         String name = species.defaultName();
         animal.setCustomName(Component.literal(name));
         animal.setCustomNameVisible(true);
         animal.setPersistenceRequired();
 
         AnimalCompanion companion = AnimalCompanion.getOrCreate(animal.getUUID(), species, name);
+        companion.establishHerdNeed(countHerd(player, companion));
 
-        sendInfo(player, "You befriended " + name + " the "
-                + species.name().toLowerCase() + ". " + name + " is your RescueCraft companion now.");
+        sendInfo(player, "You befriended " + name + " the " + species.name().toLowerCase()
+                + ". " + name + " is your RescueCraft companion now.");
 
         if (!companion.isFirstEncounterDone()) {
             speak(player, companion, AnimalPrompt.firstEncounterPlayerMessage(species), true);
         }
-        return 1;
+        showInstruction(player, companion);
     }
 
     // ----- talk -----
@@ -127,102 +173,29 @@ public final class AnimalCommands {
         return 1;
     }
 
-    // ----- give (food) -----
+    // ----- give / water / status -----
 
     private static int cmdGive(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = playerOrNull(ctx);
         if (player == null) return 0;
-
         AnimalCompanion companion = targetCompanion(player);
         if (companion == null) return 0;
-
-        AnimalSpecies species = companion.getSpecies();
-
-        ItemStack stack = findAcceptedFood(player, species);
-        if (stack == null) {
-            String how = species.needsWater()
-                    ? "Look in the village chests and bring some."
-                    : "Catch some with a fishing rod, or look in the chests.";
-            sendError(player, companion.getName() + " wants " + species.foodDisplayName() + ". " + how);
-            return 0;
-        }
-        stack.shrink(1);
-
-        boolean firstFood = companion.getFoodGiven() == 0;
-        if (firstFood) {
-            companion.establishHerdNeed(countHerd(player, companion));
-        }
-
-        TrustState before = companion.recordFood();
-        if (before != companion.getTrust()) {
-            sendTrustUpdate(player, companion.getName(), before.name(), companion.getTrust().name());
-        }
-
-        speak(player, companion,
-                "(The player just gave you some " + species.foodDisplayName() + ". You are grateful.)", true);
-
-        if (firstFood && !companion.isTaughtTip()) {
-            teachTip(player, companion);
-            announceHerdNeed(player, companion);
-            companion.markTaughtTip();
-        } else if (companion.isHerdSatisfied()) {
-            sendHerdSaved(player, companion);
-        } else {
-            sendProgress(player, companion);
-        }
-
-        if (firstFood && companion.isHerdSatisfied()) {
-            sendHerdSaved(player, companion);
-        }
+        giveFood(player, companion);
         return 1;
     }
-
-    // ----- water (land animals) -----
 
     private static int cmdWater(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = playerOrNull(ctx);
         if (player == null) return 0;
-
         AnimalCompanion companion = targetCompanion(player);
         if (companion == null) return 0;
-
-        AnimalSpecies species = companion.getSpecies();
-        if (!species.needsWater()) {
-            sendInfo(player, companion.getName() + " lives in water and does not need a water bucket. Bring fish instead.");
-            return 0;
-        }
-        if (companion.isWatered()) {
-            sendInfo(player, companion.getName() + "'s herd already has water.");
-            return 0;
-        }
-
-        ItemStack mainHand = player.getMainHandItem();
-        if (!mainHand.is(Items.WATER_BUCKET)) {
-            sendError(player, "Hold a water bucket in your main hand to give " + companion.getName() + " water.");
-            return 0;
-        }
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BUCKET));
-
-        TrustState before = companion.recordWater();
-        if (before != companion.getTrust()) {
-            sendTrustUpdate(player, companion.getName(), before.name(), companion.getTrust().name());
-        }
-        speak(player, companion, "(The player just gave your herd fresh water.)", true);
-
-        if (companion.isHerdSatisfied()) {
-            sendHerdSaved(player, companion);
-        } else {
-            sendInfo(player, companion.getName() + "'s herd now has water. " + foodNeedSummary(companion));
-        }
+        giveWater(player, companion);
         return 1;
     }
-
-    // ----- status -----
 
     private static int cmdStatus(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = playerOrNull(ctx);
         if (player == null) return 0;
-
         AnimalCompanion companion = targetCompanion(player);
         if (companion == null) return 0;
 
@@ -240,22 +213,119 @@ public final class AnimalCommands {
         } else {
             sendInfo(player, "  food:    none given yet");
         }
+        showInstruction(player, companion);
         return 1;
+    }
+
+    // ===================== actions =====================
+
+    private static void giveFood(ServerPlayer player, AnimalCompanion companion) {
+        AnimalSpecies species = companion.getSpecies();
+        ItemStack stack = findAcceptedFood(player, species);
+        if (stack == null) {
+            String how = species.needsWater()
+                    ? "Find it in the village chests, or grow your own."
+                    : "Catch it with a fishing rod, or look in the chests.";
+            sendError(player, companion.getName() + " only wants " + species.foodDisplayName() + ". " + how);
+            return;
+        }
+        stack.shrink(1);
+
+        if (companion.getHerdNeed() == 0) {
+            companion.establishHerdNeed(countHerd(player, companion));
+        }
+        boolean firstFood = companion.getFoodGiven() == 0;
+
+        TrustState before = companion.recordFood();
+        if (before != companion.getTrust()) {
+            sendTrustUpdate(player, companion.getName(), before.name(), companion.getTrust().name());
+        }
+
+        speak(player, companion,
+                "(The player just gave you some " + species.foodDisplayName() + ". You are grateful.)", true);
+
+        if (firstFood && !companion.isTaughtTip()) {
+            teachTip(player, companion);
+            announceHerdNeed(player, companion);
+            companion.markTaughtTip();
+        }
+        if (companion.isHerdSatisfied()) {
+            sendHerdSaved(player, companion);
+        } else if (!firstFood) {
+            sendProgress(player, companion);
+        }
+    }
+
+    private static void giveWater(ServerPlayer player, AnimalCompanion companion) {
+        AnimalSpecies species = companion.getSpecies();
+        if (!species.needsWater()) {
+            sendInfo(player, companion.getName() + " lives in water and does not need a bucket. Bring fish instead.");
+            return;
+        }
+        if (companion.isWatered()) {
+            sendInfo(player, companion.getName() + "'s herd already has water.");
+            return;
+        }
+        ItemStack mainHand = player.getMainHandItem();
+        if (!mainHand.is(Items.WATER_BUCKET)) {
+            sendError(player, "Hold a water bucket in your main hand to give " + companion.getName() + " water.");
+            return;
+        }
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BUCKET));
+
+        TrustState before = companion.recordWater();
+        if (before != companion.getTrust()) {
+            sendTrustUpdate(player, companion.getName(), before.name(), companion.getTrust().name());
+        }
+        speak(player, companion, "(The player just gave your herd fresh water.)", true);
+
+        if (companion.isHerdSatisfied()) {
+            sendHerdSaved(player, companion);
+        } else {
+            sendInfo(player, companion.getName() + "'s herd now has water. " + foodNeedSummary(companion));
+        }
     }
 
     // ===================== quest messaging =====================
 
+    /**
+     * Short quest reminder shown on every right-click greeting and on adopt:
+     * WHAT food, HOW MANY for the herd, and WHERE to get it. Always shown in both
+     * English and Korean, regardless of the player's English level.
+     */
+    private static void showInstruction(ServerPlayer player, AnimalCompanion companion) {
+        AnimalSpecies s = companion.getSpecies();
+        int herd = Math.max(1, companion.getHerdSize());
+        int per = s.itemsPerAnimal();
+        int total = companion.getHerdNeed() > 0 ? companion.getHerdNeed() : herd * per;
+
+        String whereEn = s.needsWater() ? "in the village chests (or grow your own)" : "by fishing with a fishing rod";
+        String whereKo = s.needsWater() ? "마을 상자에서 찾거나 직접 길러서" : "낚싯대로 낚시해서";
+        String waterEn = s.needsWater() ? " We also need water - bring a water bucket." : "";
+        String waterKo = s.needsWater() ? " 그리고 물도 필요해요 - 물 양동이를 가져와요." : "";
+        String progressEn = companion.getFoodGiven() > 0
+                ? " So far " + companion.getFoodGiven() + "/" + total + "; " + companion.getFoodRemaining() + " more to go." : "";
+        String progressKo = companion.getFoodGiven() > 0
+                ? " 지금까지 " + companion.getFoodGiven() + "/" + total + ", " + companion.getFoodRemaining() + "개 더 필요해요." : "";
+
+        player.sendSystemMessage(Component.literal("[Quest] " + companion.getName() + " needs "
+                + s.foodDisplayName() + ". There are " + herd + " of us, so the herd needs " + total
+                + " in total (" + per + " each). Find it " + whereEn + "." + waterEn + progressEn)
+                .withStyle(ChatFormatting.GOLD));
+        player.sendSystemMessage(Component.literal("[안내] " + companion.getName() + "에게는 "
+                + s.foodDisplayKorean() + "이(가) 필요해요. 무리가 " + herd + "마리라 모두 " + total
+                + "개가 필요해요(" + per + "개씩). " + whereKo + " 구할 수 있어요." + waterKo + progressKo)
+                .withStyle(ChatFormatting.YELLOW));
+    }
+
     private static void teachTip(ServerPlayer player, AnimalCompanion companion) {
         AnimalSpecies species = companion.getSpecies();
-        String band = AnimalPrompt.currentBand();
         sendInfo(player, companion.getName() + " teaches you how to get more "
                 + species.foodDisplayName() + ":");
         player.sendSystemMessage(Component.literal("  " + species.tipEnglish())
                 .withStyle(ChatFormatting.YELLOW));
-        if (!"ADVANCED".equals(band)) {
-            player.sendSystemMessage(Component.literal("  " + species.tipKorean())
-                    .withStyle(ChatFormatting.GRAY));
-        }
+        player.sendSystemMessage(Component.literal("  " + species.tipKorean())
+                .withStyle(ChatFormatting.GRAY));
     }
 
     private static void announceHerdNeed(ServerPlayer player, AnimalCompanion companion) {
@@ -335,13 +405,13 @@ public final class AnimalCommands {
     /** Resolves which befriended animal a command applies to: nearest in range, else the active one. */
     private static AnimalCompanion targetCompanion(ServerPlayer player) {
         ServerLevel level = (ServerLevel) player.level();
-        AnimalCompanion near = AnimalCompanion.findNearestAdopted(player, level, INTERACT_RADIUS);
+        AnimalCompanion near = AnimalCompanion.findNearestAdopted(player, level, TARGET_RADIUS);
         if (near != null) {
             return near;
         }
         AnimalCompanion active = AnimalCompanion.getActive();
         if (active == null) {
-            sendError(player, "You have not befriended an animal yet. Right-click one (cow, chicken, rabbit, horse, axolotl, turtle, cat).");
+            sendError(player, "You have not befriended an animal yet. Right-click one (pig, cow, chicken, rabbit, horse, axolotl, turtle, cat).");
         }
         return active;
     }

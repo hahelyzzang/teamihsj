@@ -14,8 +14,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.sojeong.rescuecraft.animal.AnimalSpecies;
 
@@ -128,10 +126,7 @@ public class RescueCraftClient implements ClientModInitializer {
                 return InteractionResult.PASS;
             }
 
-            EntityType<?> type = entity.getType();
-            boolean isPig = type == EntityType.PIG;
-            AnimalSpecies species = AnimalSpecies.forType(type);
-            if (!isPig && species == null) {
+            if (!AnimalSpecies.isSupportedType(entity.getType())) {
                 return InteractionResult.PASS;
             }
 
@@ -142,35 +137,10 @@ public class RescueCraftClient implements ClientModInitializer {
             }
             lastInteractMs = now;
 
-            ItemStack held = player.getItemInHand(hand);
-            boolean named = entity.hasCustomName();
-
-            String command;
-            if (isPig) {
-                if (!named) {
-                    command = "rcpig adopt";
-                } else if (held.is(Items.WATER_BUCKET)) {
-                    command = "rcpig water";
-                } else if (held.is(Items.CARROT) || held.is(Items.POTATO) || held.is(Items.BEETROOT)) {
-                    command = "rcpig feed";
-                } else {
-                    command = "rcpig status";
-                }
-            } else {
-                if (!named) {
-                    command = "rcanimal adopt";
-                } else if (species.needsWater() && held.is(Items.WATER_BUCKET)) {
-                    command = "rcanimal water";
-                } else if (species.accepts(held)) {
-                    command = "rcanimal give";
-                } else {
-                    command = "rcanimal status";
-                }
-            }
-
+            // The server decides what to do based on adoption state and the held item.
             ClientPacketListener connection = Minecraft.getInstance().getConnection();
             if (connection != null) {
-                connection.sendCommand(command);
+                connection.sendCommand("rcanimal interact");
             }
             // Consume the interaction so vanilla behaviour (mount, breed, tame) is skipped.
             return InteractionResult.SUCCESS;
@@ -205,8 +175,7 @@ public class RescueCraftClient implements ClientModInitializer {
             return true;
         }
 
-        String prefix = target.getType() == EntityType.PIG ? "rcpig talk " : "rcanimal talk ";
-        connection.sendCommand(prefix + message);
+        connection.sendCommand("rcanimal talk " + message);
         return false;
     }
 
@@ -233,7 +202,7 @@ public class RescueCraftClient implements ClientModInitializer {
     }
 
     private static boolean isRescueType(EntityType<?> type) {
-        return type == EntityType.PIG || AnimalSpecies.isSupportedType(type);
+        return AnimalSpecies.isSupportedType(type);
     }
 
     private static void giveGuidebookAfterAnswer(Minecraft client) {

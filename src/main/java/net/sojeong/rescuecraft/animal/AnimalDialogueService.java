@@ -94,7 +94,7 @@ public final class AnimalDialogueService {
                   "format": "json",
                   "options": {
                     "temperature": 0.6,
-                    "num_predict": 200
+                    "num_predict": 300
                   }
                 }
                 """.formatted(modelName(), escapeJson(system), escapeJson(user));

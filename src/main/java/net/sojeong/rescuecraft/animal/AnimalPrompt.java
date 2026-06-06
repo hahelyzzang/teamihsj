@@ -18,12 +18,12 @@ public final class AnimalPrompt {
         String levelRule = switch (englishBand) {
             case "BEGINNER" -> """
                     The player is a BEGINNER English learner.
-                    - Use very short, simple English. Maximum 8 words per sentence.
-                    - Use only common A1/A2 vocabulary. No idioms. No contractions if avoidable.
-                    - For "english": one or two short sentences.
-                    - For "korean": ALWAYS provide a clear, natural Korean translation
-                      of the same meaning. The Korean line is required and must always
-                      appear. Keep it warm and child-friendly.
+                    - Use simple, friendly English with common A1/A2 words. Avoid idioms.
+                    - Keep each sentence short (about 8-10 words), but write 2 OR 3
+                      sentences so it feels like a real little conversation, not one word.
+                    - End with a simple question to the player to keep the chat going.
+                    - For "korean": ALWAYS give a clear, natural Korean translation of the
+                      whole line. It is required every time. Keep it warm and child-friendly.
                     """;
             case "INTERMEDIATE" -> """
                     The player is an INTERMEDIATE English learner.
