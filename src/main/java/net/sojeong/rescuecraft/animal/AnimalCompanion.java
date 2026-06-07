@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +28,9 @@ public class AnimalCompanion {
     /** The most recently adopted animal. Used as a fallback target. */
     private static volatile UUID activeUuid = null;
 
+    /** Length of the recovery / care period before the herd can be freed (3 Minecraft days). */
+    public static final long CARE_TICKS = 3L * 24000L;
+
     private final UUID animalUuid;
     private final AnimalSpecies species;
     private final String name;
@@ -44,6 +48,11 @@ public class AnimalCompanion {
     private boolean watered = false;
     /** Whether we have already taught the cultivation/fishing tip. */
     private boolean taughtTip = false;
+
+    /** Day-time (advances with sleep) when food + water were first fully provided; -1 until then. */
+    private long satisfiedAtGameTime = -1L;
+    /** Whether the herd has been told they are free (story finale, delivered once). */
+    private boolean liberated = false;
 
     private String lastEnglish = "";
     private String lastKorean = "";
@@ -63,6 +72,23 @@ public class AnimalCompanion {
 
     public static AnimalCompanion get(UUID animalUuid) {
         return COMPANIONS.get(animalUuid);
+    }
+
+    public static Collection<AnimalCompanion> all() {
+        return COMPANIONS.values();
+    }
+
+    /**
+     * Returns the single companion already adopted for this species, or null if
+     * none. Used to keep ONE representative per species (e.g. only one Bori).
+     */
+    public static AnimalCompanion getBySpecies(AnimalSpecies species) {
+        for (AnimalCompanion companion : COMPANIONS.values()) {
+            if (companion.species == species) {
+                return companion;
+            }
+        }
+        return null;
     }
 
     public static AnimalCompanion getActive() {
@@ -158,6 +184,45 @@ public class AnimalCompanion {
 
     public int getFoodRemaining() {
         return Math.max(0, herdNeed - foodGiven);
+    }
+
+    // ---- recovery / liberation (3-day care) ----
+
+    /** Records the moment food + water were first fully provided (recovery begins). */
+    public void markSatisfied(long gameTime) {
+        if (satisfiedAtGameTime < 0) {
+            satisfiedAtGameTime = gameTime;
+        }
+    }
+
+    public boolean isSatisfiedRecorded() {
+        return satisfiedAtGameTime >= 0;
+    }
+
+    /** Ticks left in the recovery period; CARE_TICKS until supplies are complete. */
+    public long careTicksRemaining(long now) {
+        if (satisfiedAtGameTime < 0) {
+            return CARE_TICKS;
+        }
+        return Math.max(0L, CARE_TICKS - (now - satisfiedAtGameTime));
+    }
+
+    /** Whole days left in the recovery period (rounded up, min 0). */
+    public int careDaysRemaining(long now) {
+        return (int) Math.ceil(careTicksRemaining(now) / 24000.0);
+    }
+
+    /** True once supplies are complete and the 3-day recovery has fully passed. */
+    public boolean isCareComplete(long now) {
+        return satisfiedAtGameTime >= 0 && (now - satisfiedAtGameTime) >= CARE_TICKS;
+    }
+
+    public boolean isLiberated() {
+        return liberated;
+    }
+
+    public void markLiberated() {
+        this.liberated = true;
     }
 
     /**

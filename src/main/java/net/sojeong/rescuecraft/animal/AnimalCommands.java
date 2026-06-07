@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -53,9 +54,14 @@ public final class AnimalCommands {
 
     private AnimalCommands() {}
 
+    /** Ticks between recovery checks. */
+    private static int recoveryTick = 0;
+
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 registerInternal(dispatcher));
+        // Each second, check whether any herd has finished its 3-day recovery.
+        ServerTickEvents.END_SERVER_TICK.register(AnimalCommands::tickRecovery);
     }
 
     private static void registerInternal(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -91,6 +97,15 @@ public final class AnimalCommands {
 
         AnimalCompanion companion = AnimalCompanion.get(animal.getUUID());
         if (companion == null) {
+            // Only ONE representative per species: if you already have e.g. a pig
+            // friend, clicking another pig will not create a second one.
+            AnimalCompanion existingForSpecies = AnimalCompanion.getBySpecies(species);
+            if (existingForSpecies != null) {
+                sendInfo(player, existingForSpecies.getName() + " the " + species.name().toLowerCase()
+                        + " is already your friend - the rest of the herd follows " + existingForSpecies.getName()
+                        + ". Go help " + existingForSpecies.getName() + ".");
+                return 1;
+            }
             befriend(player, animal, species);
             return 1;
         }
@@ -134,6 +149,14 @@ public final class AnimalCommands {
             AnimalCompanion.getOrCreate(animal.getUUID(), species, existing.getName());
             sendInfo(player, existing.getName() + " is already your friend.");
             showInstruction(player, existing);
+            return 1;
+        }
+        // Keep one representative per species.
+        AnimalCompanion existingForSpecies = AnimalCompanion.getBySpecies(species);
+        if (existingForSpecies != null) {
+            sendInfo(player, existingForSpecies.getName() + " the " + species.name().toLowerCase()
+                    + " is already your friend - help " + existingForSpecies.getName() + " instead.");
+            showInstruction(player, existingForSpecies);
             return 1;
         }
         befriend(player, animal, species);
@@ -250,7 +273,7 @@ public final class AnimalCommands {
             companion.markTaughtTip();
         }
         if (companion.isHerdSatisfied()) {
-            sendHerdSaved(player, companion);
+            onSuppliesComplete(player, companion);
         } else if (!firstFood) {
             sendProgress(player, companion);
         }
@@ -280,7 +303,7 @@ public final class AnimalCommands {
         speak(player, companion, "(The player just gave your herd fresh water.)", true);
 
         if (companion.isHerdSatisfied()) {
-            sendHerdSaved(player, companion);
+            onSuppliesComplete(player, companion);
         } else {
             sendInfo(player, companion.getName() + "'s herd now has water. " + foodNeedSummary(companion));
         }
@@ -295,6 +318,32 @@ public final class AnimalCommands {
      */
     private static void showInstruction(ServerPlayer player, AnimalCompanion companion) {
         AnimalSpecies s = companion.getSpecies();
+
+        // Finale: the herd has been told they are free.
+        if (companion.isLiberated()) {
+            player.sendSystemMessage(Component.literal("[Quest] " + companion.getName()
+                    + "'s herd is free now. Thank you for restoring the wildlife!")
+                    .withStyle(ChatFormatting.GOLD));
+            player.sendSystemMessage(Component.literal("[안내] " + companion.getName()
+                    + "의 무리는 이제 자유예요. 야생을 되살려줘서 고마워요!")
+                    .withStyle(ChatFormatting.YELLOW));
+            return;
+        }
+
+        // Recovery phase: supplies are complete, waiting out the 3-day care period.
+        if (companion.isHerdSatisfied()) {
+            int daysLeft = companion.careDaysRemaining(player.level().getDayTime());
+            player.sendSystemMessage(Component.literal("[Quest] " + companion.getName()
+                    + " has enough food and water. We are recovering - about " + daysLeft
+                    + " day(s) until we are well. Stay near and keep us safe!")
+                    .withStyle(ChatFormatting.GOLD));
+            player.sendSystemMessage(Component.literal("[안내] " + companion.getName()
+                    + "은(는) 먹이와 물이 충분해요. 회복 중이에요 - 약 " + daysLeft
+                    + "일 뒤면 다 나아요. 곁에서 지켜줘요!")
+                    .withStyle(ChatFormatting.YELLOW));
+            return;
+        }
+
         int herd = Math.max(1, companion.getHerdSize());
         int per = s.itemsPerAnimal();
         int total = companion.getHerdNeed() > 0 ? companion.getHerdNeed() : herd * per;
@@ -369,19 +418,69 @@ public final class AnimalCommands {
         }
     }
 
-    private static void sendHerdSaved(ServerPlayer player, AnimalCompanion companion) {
+    /**
+     * Supplies (food + water) are complete: the 3-day recovery begins. The herd is
+     * not freed yet - that happens automatically once the care period has passed
+     * (see {@link #tickRecovery}).
+     */
+    private static void onSuppliesComplete(ServerPlayer player, AnimalCompanion companion) {
+        long now = player.level().getDayTime();
+        boolean firstTime = !companion.isSatisfiedRecorded();
+        companion.markSatisfied(now);
+        int daysLeft = companion.careDaysRemaining(now);
         AnimalSpecies species = companion.getSpecies();
-        String band = AnimalPrompt.currentBand();
-        String english = "Our whole herd has enough " + species.foodDisplayName()
-                + " now. We are safe because of you. Thank you, friend!";
+
+        String waterEn = species.needsWater() ? " and water" : "";
+        String english = "We have enough " + species.foodDisplayName() + waterEn
+                + " now! Please care for us for about " + daysLeft + " more day(s) while we recover.";
         player.sendSystemMessage(Component.literal(companion.getName() + ": " + english)
                 .withStyle(ChatFormatting.GREEN));
-        if (!"ADVANCED".equals(band)) {
-            String korean = "이제 우리 무리 모두가 충분히 먹을 수 있어. 네 덕분에 우리는 안전해. 고마워, 친구!";
-            player.sendSystemMessage(Component.literal(companion.getName() + " (한국어): " + korean)
-                    .withStyle(ChatFormatting.GRAY));
+        String korean = "이제 충분히 먹고 마셨어! 회복하는 동안 약 " + daysLeft + "일만 더 곁에서 돌봐줘.";
+        player.sendSystemMessage(Component.literal(companion.getName() + " (한국어): " + korean)
+                .withStyle(ChatFormatting.GRAY));
+
+        if (firstTime) {
+            sendInfo(player, "Supplies complete for " + companion.getName()
+                    + "'s herd. Care for them for 3 days, then they will be ready to be freed.");
         }
-        sendInfo(player, "Quest complete: you saved " + companion.getName() + "'s herd!");
+    }
+
+    /** Each second: deliver the liberation finale to any herd that finished recovering. */
+    private static void tickRecovery(MinecraftServer server) {
+        if (++recoveryTick < 20) {
+            return;
+        }
+        recoveryTick = 0;
+        for (AnimalCompanion companion : AnimalCompanion.all()) {
+            if (companion.isLiberated() || !companion.isSatisfiedRecorded()) {
+                continue;
+            }
+            for (ServerLevel level : server.getAllLevels()) {
+                Entity entity = level.getEntity(companion.getAnimalUuid());
+                if (entity == null) {
+                    continue;
+                }
+                if (companion.isCareComplete(level.getDayTime())) {
+                    deliverLiberation(level, companion);
+                    companion.markLiberated();
+                }
+                break;
+            }
+        }
+    }
+
+    private static void deliverLiberation(ServerLevel level, AnimalCompanion companion) {
+        String english = companion.getName() + ": Thank you for saving us, we are all well now. "
+                + "Please, bring down the iron bars and help us be free. We will restore the wildlife.";
+        String korean = companion.getName() + " (한국어): 우리를 구해줘서 고마워, 이제 우리 모두 건강해졌어. "
+                + "부디 철창을 내리고 우리가 자유로워지게 도와줘. 우리가 야생을 되살릴게.";
+        for (ServerPlayer player : level.players()) {
+            player.sendSystemMessage(Component.literal(english).withStyle(ChatFormatting.LIGHT_PURPLE));
+            player.sendSystemMessage(Component.literal(korean).withStyle(ChatFormatting.GRAY));
+            player.sendSystemMessage(Component.literal("[RescueCraft] " + companion.getName()
+                    + "'s herd is ready to be freed - break the iron bars to let them out!")
+                    .withStyle(ChatFormatting.GOLD));
+        }
     }
 
     private static String foodNeedSummary(AnimalCompanion companion) {

@@ -30,10 +30,13 @@ public enum AnimalSpecies {
             "당근, 감자, 비트",
             2,
             "a timid little pig who spent her whole life in a cage and is very hungry",
-            "To grow her food: use a hoe on grass next to water to make farmland, "
-                    + "plant a carrot, potato, or beetroot, wait until it is grown, then harvest.",
-            "먹이 키우는 법: 물 옆 풀밭을 괭이로 갈아 경작지를 만들고, 당근/감자/비트를 심은 뒤 "
-                    + "다 자라면 수확하세요."
+            "1) Craft a hoe (2 sticks + 2 planks). 2) Right-click grass within 4 blocks of water "
+                    + "to turn it into farmland. 3) Plant a carrot, potato, or beetroot on it. "
+                    + "4) Wait for it to grow (or use bone meal to speed it up). "
+                    + "5) Break it to collect several, and replant one to keep the farm going.",
+            "1) 괭이를 만들어요(막대 2 + 판자 2). 2) 물에서 4칸 안의 풀밭을 우클릭해 경작지로 만들어요. "
+                    + "3) 당근/감자/비트를 심어요. 4) 다 자랄 때까지 기다리거나 뼛가루로 빠르게 키워요. "
+                    + "5) 부수면 여러 개가 나와요. 하나는 다시 심어 농사를 이어가요."
     ),
 
     COW(
@@ -45,10 +48,13 @@ public enum AnimalSpecies {
             "밀이나 비트",
             2,
             "a gentle, slow dairy cow who misses chewing fresh wheat",
-            "To grow wheat or beetroot: use a hoe on grass next to water to make farmland, "
-                    + "plant wheat or beetroot seeds, wait until they are ripe, then harvest.",
-            "밀이나 비트 키우는 법: 물 옆 풀밭을 괭이로 갈아 경작지를 만들고, 밀/비트 씨앗을 심은 뒤 "
-                    + "다 자라면 수확하세요."
+            "1) Craft a hoe. 2) Right-click grass next to water to make farmland. "
+                    + "3) Plant wheat seeds or beetroot seeds on it. 4) Give it light and time, "
+                    + "or use bone meal. 5) Harvest when the wheat is golden or the beetroot is red, "
+                    + "then replant the seeds you get back.",
+            "1) 괭이를 만들어요. 2) 물 옆 풀밭을 우클릭해 경작지로 만들어요. 3) 밀 씨앗이나 비트 씨앗을 심어요. "
+                    + "4) 빛과 시간을 주거나 뼛가루를 써요. 5) 밀이 황금색, 비트가 빨개지면 수확하고 "
+                    + "나온 씨앗을 다시 심어요."
     ),
 
     CHICKEN(
@@ -60,10 +66,13 @@ public enum AnimalSpecies {
             "밀 씨앗이나 비트 씨앗",
             1,
             "a small, fluffy, easily-startled chicken who loves pecking at seeds",
-            "To get more seeds: break tall grass for wheat seeds, and harvest beetroot for "
-                    + "beetroot seeds. Plant them on farmland to grow even more.",
-            "씨앗 더 얻는 법: 키 큰 풀을 부수면 밀 씨앗이, 비트를 수확하면 비트 씨앗이 나와요. "
-                    + "경작지에 심으면 더 많이 모을 수 있어요."
+            "1) Punch tall grass to get wheat seeds (and harvest beetroot for beetroot seeds). "
+                    + "2) Craft a hoe and till grass next to water into farmland. 3) Plant the seeds. "
+                    + "4) Wait or use bone meal until they ripen. 5) Harvest to get even more seeds, "
+                    + "and replant some.",
+            "1) 키 큰 풀을 쳐서 밀 씨앗을 얻어요(비트를 수확하면 비트 씨앗). 2) 괭이로 물 옆 풀을 갈아 "
+                    + "경작지를 만들어요. 3) 씨앗을 심어요. 4) 기다리거나 뼛가루로 키워요. "
+                    + "5) 수확하면 씨앗이 더 많이 나와요. 일부는 다시 심어요."
     ),
 
     RABBIT(
@@ -75,10 +84,12 @@ public enum AnimalSpecies {
             "당근이나 민들레",
             1,
             "a shy, twitchy little rabbit who nibbles carrots and dandelions",
-            "To get more: plant a carrot on watered farmland and wait until it is grown, "
-                    + "and pick yellow dandelions from grassy fields.",
-            "더 얻는 법: 물을 댄 경작지에 당근을 심고 다 자랄 때까지 기다리세요. "
-                    + "노란 민들레는 들판에서 뜯으면 돼요."
+            "Carrots: 1) make a hoe, 2) till grass next to water, 3) plant a carrot, "
+                    + "4) wait or use bone meal, 5) harvest several and replant one. "
+                    + "Dandelions: pick the yellow flowers in grassy fields, or use bone meal on grass.",
+            "당근: 1) 괭이를 만들어요, 2) 물 옆 풀을 갈아요, 3) 당근을 심어요, "
+                    + "4) 기다리거나 뼛가루를 써요, 5) 여러 개를 수확하고 하나는 다시 심어요. "
+                    + "민들레: 들판의 노란 꽃을 따거나, 풀밭에 뼛가루를 쓰면 더 자라요."
     ),
 
     HORSE(
@@ -90,10 +101,12 @@ public enum AnimalSpecies {
             "사과, 밀, 설탕",
             3,
             "a proud but tired horse who is comforted by sweet apples and wheat",
-            "To get more: chop oak trees for apples, grow wheat on farmland, "
-                    + "and make sugar from sugar cane grown beside water.",
-            "더 얻는 법: 참나무를 베면 사과가 나오고, 경작지에서 밀을 키울 수 있어요. "
-                    + "물가에서 자란 사탕수수로 설탕을 만들 수 있어요."
+            "Apples: chop oak leaves and oak trees - apples drop sometimes; plant saplings for more. "
+                    + "Wheat: till grass by water, plant seeds, let it grow, then harvest. "
+                    + "Sugar: cut sugar cane that grows next to water, then craft it into sugar.",
+            "사과: 참나무 잎과 나무를 베면 가끔 떨어져요. 묘목을 심어 나무를 늘려요. "
+                    + "밀: 물가 풀을 갈아 씨앗을 심고 키워서 수확해요. "
+                    + "설탕: 물가에서 자란 사탕수수를 베어 설탕으로 제작해요."
     ),
 
     // ----- Aquatic animals & the cat: fish caught by fishing -----

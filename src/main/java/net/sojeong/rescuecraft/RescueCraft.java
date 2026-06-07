@@ -32,6 +32,8 @@ public class RescueCraft implements ModInitializer {
         // Register the /rcanimal command tree (cow, chicken, rabbit, horse NPCs).
         AnimalCommands.register();
         HungryAnimalParticles.register();
+        // Speed up crop growth to ~5 minutes near players.
+        CropGrowthAccelerator.register();
     }
 
     public static void giveFieldJournal(ServerPlayer player) {
@@ -128,11 +130,23 @@ public class RescueCraft implements ModInitializer {
                                 Find seeds, crops and buckets in the village
                                 chests. Bring an animal its food and it will
                                 teach you how to grow or catch more - then ask
-                                for enough for its WHOLE herd (each animal needs
-                                a few, so a herd needs many).
+                                for enough for its WHOLE herd. (Crops here grow
+                                fast - about 5 minutes.)
 
                                 Right-click an animal any time to hear again
                                 what it needs, how many, and where to find it.
+                                """)),
+
+                        Filterable.passThrough(Component.literal("""
+                                Setting them free
+
+                                Once a herd has all its food and water, care for
+                                them for 3 days while they recover. Then they will
+                                ask you to break the iron bars and set them free,
+                                so they can restore the wildlife.
+
+                                Only ONE of each animal becomes your friend - the
+                                rest of the herd follows that one.
                                 """)),
 
                         Filterable.passThrough(Component.literal("""

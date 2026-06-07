@@ -6,7 +6,8 @@
 ## 맵에 있는 동물 (확인됨)
 월드 템플릿 entities 데이터 분석 결과:
 `pig, cow, chicken, rabbit, axolotl, turtle, cat, horse` + 마을 주민(villager).
-이 중 대표 7종을 대화형 NPC로 구현했습니다(pig는 기존 `/rcpig` 유지).
+이 중 대표 8종(pig 포함)을 하나의 시스템으로 통합해 대화형 NPC로 구현했습니다.
+(pig도 이제 `/rcanimal`·우클릭으로 동작하며, `/rcpig`는 레거시로 남아 있습니다.)
 
 ## 상자(chest)
 월드 block region 데이터에 `minecraft:chest` 10개 + farmland·composter·
@@ -23,9 +24,10 @@
 
 ## 동물별 요구 / 특성 (`AnimalSpecies.java`)
 
-### 육상 동물 — 물 + 여러 작물 (돼지처럼)
+### 육상 동물 — 물 + 여러 작물
 | 동물 | 이름 | 요구 먹이 | 마리당 | 물 |
 |---|---|---|---|---|
+| PIG | Bori | 당근 / 감자 / 비트 | 2 | 필요 |
 | COW | Daisy | 밀 / 비트 | 2 | 필요 |
 | CHICKEN | Coco | 밀 씨앗 / 비트 씨앗 | 1 | 필요 |
 | RABBIT | Mochi | 당근 / 민들레 | 1 | 필요 |
@@ -75,3 +77,20 @@
 이 프로젝트는 **Java 25 / Minecraft 26.1.2** 대상입니다. (개발 샌드박스에
 JDK 21만 있으면 gradle 컴파일이 불가하니, JDK 25 환경에서 `./gradlew build`로
 최종 확인하세요.)
+
+## 업데이트: 3일 돌봄 → 해방 / 종별 1마리 / 빠른 재배
+
+- **종별 대표 1마리만 입양**: 같은 종의 다른 개체를 우클릭해도 새 친구가 되지
+  않고 기존 대표를 돕도록 안내합니다(실수로 돼지 여러 마리가 모두 Bori 되는 문제 해결).
+  `AnimalCompanion.getBySpecies()`로 종 중복을 막습니다.
+- **3일 돌봄 후 해방**: 무리에게 먹이+물을 모두 주면 회복(care)이 시작되고,
+  **3일(게임 내, 잠자기로 단축 가능)** 이 지나면 동물이 다음 대사를 합니다 —
+  "Thank you for saving us, we are all well now. Please, bring down the iron bars
+  and help us be free. We will restore the wildlife." (영/한 동시 출력)
+  타이머는 `getDayTime()` 기준이라 침대에서 자면 빨리 지나갑니다. 시간이 멈춰
+  있으면(daylight cycle off) 진행되지 않으니 주의.
+- **재배 시간 ~5분**: `CropGrowthAccelerator`가 플레이어 주변 작물
+  (밀/감자/당근/비트, `CropBlock`)을 매초 확률적으로 한 단계씩 키워 약 5분 만에
+  다 자라게 합니다. `TARGET_SECONDS` 상수로 조절 가능.
+- **재배 설명 강화**: 각 동물의 `tipEnglish/tipKorean`을 단계별(괭이 제작 →
+  경작지 → 심기 → 성장/뼛가루 → 수확/재심기)로 더 자세히 보강.
