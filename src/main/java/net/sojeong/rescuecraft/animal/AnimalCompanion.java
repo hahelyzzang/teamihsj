@@ -49,7 +49,7 @@ public class AnimalCompanion {
     /** Whether we have already taught the cultivation/fishing tip. */
     private boolean taughtTip = false;
 
-    /** Day-time (advances with sleep) when food + water were first fully provided; -1 until then. */
+    /** Game time (total ticks) when food + water were first fully provided; -1 until then. */
     private long satisfiedAtGameTime = -1L;
     /** Whether the herd has been told they are free (story finale, delivered once). */
     private boolean liberated = false;

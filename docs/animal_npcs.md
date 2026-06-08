@@ -87,8 +87,8 @@ JDK 21만 있으면 gradle 컴파일이 불가하니, JDK 25 환경에서 `./gra
   **3일(게임 내, 잠자기로 단축 가능)** 이 지나면 동물이 다음 대사를 합니다 —
   "Thank you for saving us, we are all well now. Please, bring down the iron bars
   and help us be free. We will restore the wildlife." (영/한 동시 출력)
-  타이머는 `getDayTime()` 기준이라 침대에서 자면 빨리 지나갑니다. 시간이 멈춰
-  있으면(daylight cycle off) 진행되지 않으니 주의.
+  타이머는 `getGameTime()`(총 게임 틱) 기준이라 실제 플레이 3일(약 60분)이 지나면
+  진행됩니다. `AnimalCompanion.CARE_TICKS` 로 길이를 조절할 수 있어요.
 - **재배 시간 ~5분**: `CropGrowthAccelerator`가 플레이어 주변 작물
   (밀/감자/당근/비트, `CropBlock`)을 매초 확률적으로 한 단계씩 키워 약 5분 만에
   다 자라게 합니다. `TARGET_SECONDS` 상수로 조절 가능.

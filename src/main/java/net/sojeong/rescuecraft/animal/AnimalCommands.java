@@ -332,7 +332,7 @@ public final class AnimalCommands {
 
         // Recovery phase: supplies are complete, waiting out the 3-day care period.
         if (companion.isHerdSatisfied()) {
-            int daysLeft = companion.careDaysRemaining(player.level().getDayTime());
+            int daysLeft = companion.careDaysRemaining(player.level().getGameTime());
             player.sendSystemMessage(Component.literal("[Quest] " + companion.getName()
                     + " has enough food and water. We are recovering - about " + daysLeft
                     + " day(s) until we are well. Stay near and keep us safe!")
@@ -424,7 +424,7 @@ public final class AnimalCommands {
      * (see {@link #tickRecovery}).
      */
     private static void onSuppliesComplete(ServerPlayer player, AnimalCompanion companion) {
-        long now = player.level().getDayTime();
+        long now = player.level().getGameTime();
         boolean firstTime = !companion.isSatisfiedRecorded();
         companion.markSatisfied(now);
         int daysLeft = companion.careDaysRemaining(now);
@@ -460,7 +460,7 @@ public final class AnimalCommands {
                 if (entity == null) {
                     continue;
                 }
-                if (companion.isCareComplete(level.getDayTime())) {
+                if (companion.isCareComplete(level.getGameTime())) {
                     deliverLiberation(level, companion);
                     companion.markLiberated();
                 }
