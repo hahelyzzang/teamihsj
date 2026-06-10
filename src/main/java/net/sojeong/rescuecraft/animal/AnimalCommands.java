@@ -97,20 +97,19 @@ public final class AnimalCommands {
 
         AnimalCompanion companion = AnimalCompanion.get(animal.getUUID());
         if (companion == null) {
-            // Only ONE representative per species: if you already have e.g. a pig
-            // friend, clicking another pig will not create a second one.
+            // Only ONE representative per species. If this species already has a
+            // friend (e.g. Bori), act on that one - even though a DIFFERENT individual
+            // was clicked. This fixes the "other pigs crowd around the food so I can't
+            // click Bori" problem: feeding any pig in the herd feeds the representative.
             AnimalCompanion existingForSpecies = AnimalCompanion.getBySpecies(species);
             if (existingForSpecies != null) {
-                sendInfo(player, existingForSpecies.getName() + " the " + species.name().toLowerCase()
-                        + " is already your friend - the rest of the herd follows " + existingForSpecies.getName()
-                        + ". Go help " + existingForSpecies.getName() + ".");
+                companion = existingForSpecies;
+            } else {
+                befriend(player, animal, species);
                 return 1;
             }
-            befriend(player, animal, species);
-            return 1;
         }
-        // Already befriended: act on whatever the player is holding.
-        AnimalCompanion.getOrCreate(animal.getUUID(), species, companion.getName()); // refocus
+        // Act on the representative companion with whatever the player is holding.
         ItemStack held = player.getMainHandItem();
         if (species.accepts(held)) {
             giveFood(player, companion);
