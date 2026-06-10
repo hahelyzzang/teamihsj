@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
@@ -228,10 +229,10 @@ public final class AnimalCommands {
         if (species.needsWater()) {
             sendInfo(player, "  water:   " + (companion.isWatered() ? "given" : "needed (hold a water bucket)"));
         }
-        if (companion.getHerdNeed() > 0) {
+        if (companion.isPerFoodNeedSet()) {
             sendInfo(player, "  herd:    " + companion.getHerdSize() + " animals");
-            sendInfo(player, "  food:    " + companion.getFoodGiven() + " / " + companion.getHerdNeed()
-                    + " given (" + companion.getFoodRemaining() + " to go)");
+            sendInfo(player, "  needs:   " + companion.getPerFoodNeed() + " of EACH food");
+            sendInfo(player, "  food:    " + foodBreakdown(companion));
         } else {
             sendInfo(player, "  food:    none given yet");
         }
@@ -243,28 +244,36 @@ public final class AnimalCommands {
 
     private static void giveFood(ServerPlayer player, AnimalCompanion companion) {
         AnimalSpecies species = companion.getSpecies();
-        ItemStack stack = findAcceptedFood(player, species);
-        if (stack == null) {
-            String how = species.needsWater()
-                    ? "Find it in the village chests, or grow your own."
-                    : "Catch it with a fishing rod, or look in the chests.";
-            sendError(player, companion.getName() + " only wants " + species.foodDisplayName() + ". " + how);
-            return;
-        }
-        stack.shrink(1);
-
-        if (companion.getHerdNeed() == 0) {
+        if (!companion.isPerFoodNeedSet()) {
             companion.establishHerdNeed(countHerd(player, companion));
         }
-        boolean firstFood = companion.getFoodGiven() == 0;
 
-        TrustState before = companion.recordFood();
+        // The herd needs EVERY accepted food (AND), so prefer a food still missing.
+        ItemStack stack = findNeededFood(player, companion);
+        if (stack == null) {
+            if (hasAnyAcceptedFood(player, species)) {
+                sendInfo(player, companion.getName() + " already has enough of that one. Still need: "
+                        + stillNeededSummary(companion));
+            } else {
+                String how = species.needsWater()
+                        ? "Find them in the village chests/fields, or grow your own."
+                        : "Catch them with a fishing rod.";
+                sendError(player, companion.getName() + " needs ALL of: " + species.foodDisplayName()
+                        + " (each kind). " + how);
+            }
+            return;
+        }
+        Item item = stack.getItem();
+        stack.shrink(1);
+
+        boolean firstFood = companion.getTotalGiven() == 0;
+        TrustState before = companion.recordFood(item);
         if (before != companion.getTrust()) {
             sendTrustUpdate(player, companion.getName(), before.name(), companion.getTrust().name());
         }
 
         speak(player, companion,
-                "(The player just gave you some " + species.foodDisplayName() + ". You are grateful.)", true);
+                "(The player just gave you a " + foodLabel(item) + ". You are grateful.)", true);
 
         if (firstFood && !companion.isTaughtTip()) {
             teachTip(player, companion);
@@ -273,7 +282,7 @@ public final class AnimalCommands {
         }
         if (companion.isHerdSatisfied()) {
             onSuppliesComplete(player, companion);
-        } else if (!firstFood) {
+        } else {
             sendProgress(player, companion);
         }
     }
@@ -344,25 +353,23 @@ public final class AnimalCommands {
         }
 
         int herd = Math.max(1, companion.getHerdSize());
-        int per = s.itemsPerAnimal();
-        int total = companion.getHerdNeed() > 0 ? companion.getHerdNeed() : herd * per;
+        int perEach = companion.isPerFoodNeedSet() ? companion.getPerFoodNeed() : herd * s.itemsPerAnimal();
+        int total = perEach * s.acceptedFoods().size();
 
-        String whereEn = s.needsWater() ? "in the village chests (or grow your own)" : "by fishing with a fishing rod";
-        String whereKo = s.needsWater() ? "마을 상자에서 찾거나 직접 길러서" : "낚싯대로 낚시해서";
+        String whereEn = s.needsWater() ? "in the village chests/fields (or grow your own)" : "by fishing with a fishing rod";
+        String whereKo = s.needsWater() ? "마을 상자/들판에서 찾거나 직접 길러서" : "낚싯대로 낚시해서";
         String waterEn = s.needsWater() ? " We also need water - bring a water bucket." : "";
         String waterKo = s.needsWater() ? " 그리고 물도 필요해요 - 물 양동이를 가져와요." : "";
-        String progressEn = companion.getFoodGiven() > 0
-                ? " So far " + companion.getFoodGiven() + "/" + total + "; " + companion.getFoodRemaining() + " more to go." : "";
-        String progressKo = companion.getFoodGiven() > 0
-                ? " 지금까지 " + companion.getFoodGiven() + "/" + total + ", " + companion.getFoodRemaining() + "개 더 필요해요." : "";
+        String progressEn = companion.getTotalGiven() > 0 ? " Progress: " + foodBreakdown(companion) + "." : "";
+        String progressKo = companion.getTotalGiven() > 0 ? " 진행: " + foodBreakdown(companion) + "." : "";
 
-        player.sendSystemMessage(Component.literal("[Quest] " + companion.getName() + " needs "
-                + s.foodDisplayName() + ". There are " + herd + " of us, so the herd needs " + total
-                + " in total (" + per + " each). Find it " + whereEn + "." + waterEn + progressEn)
+        player.sendSystemMessage(Component.literal("[Quest] " + companion.getName() + " needs ALL of: "
+                + s.foodDisplayName() + " - " + perEach + " of EACH (herd of " + herd + "), so " + total
+                + " in total. Find them " + whereEn + "." + waterEn + progressEn)
                 .withStyle(ChatFormatting.GOLD));
         player.sendSystemMessage(Component.literal("[안내] " + companion.getName() + "에게는 "
-                + s.foodDisplayKorean() + "이(가) 필요해요. 무리가 " + herd + "마리라 모두 " + total
-                + "개가 필요해요(" + per + "개씩). " + whereKo + " 구할 수 있어요." + waterKo + progressKo)
+                + s.foodDisplayKorean() + " 전부가 필요해요. 무리가 " + herd + "마리라 각각 " + perEach
+                + "개씩, 총 " + total + "개예요. " + whereKo + " 구할 수 있어요." + waterKo + progressKo)
                 .withStyle(ChatFormatting.YELLOW));
     }
 
@@ -379,39 +386,34 @@ public final class AnimalCommands {
     private static void announceHerdNeed(ServerPlayer player, AnimalCompanion companion) {
         AnimalSpecies species = companion.getSpecies();
         int herd = companion.getHerdSize();
-        int per = species.itemsPerAnimal();
-        int total = companion.getHerdNeed();
+        int perEach = companion.getPerFoodNeed();
+        int total = companion.getTotalNeed();
         String band = AnimalPrompt.currentBand();
 
         String waterEn = species.needsWater() ? " We also need fresh water." : "";
-        String english = "There are " + herd + " of us here. Each of us needs " + per + " "
-                + species.foodDisplayName() + ". Please bring " + herd + " x " + per + " = "
-                + total + " for our whole herd." + waterEn;
+        String english = "There are " + herd + " of us here. We need ALL of " + species.foodDisplayName()
+                + " - " + perEach + " of EACH (" + total + " in total) for the whole herd." + waterEn;
         player.sendSystemMessage(Component.literal(companion.getName() + ": " + english)
                 .withStyle(ChatFormatting.LIGHT_PURPLE));
 
         if (!"ADVANCED".equals(band)) {
             String waterKo = species.needsWater() ? " 그리고 물도 필요해." : "";
-            String korean = "우리는 여기 " + herd + "마리야. 한 마리당 " + per + "개씩 필요해. "
-                    + "무리 전체를 위해 " + herd + " x " + per + " = " + total + "개를 가져다 줘." + waterKo;
+            String korean = "우리는 여기 " + herd + "마리야. " + species.foodDisplayKorean()
+                    + " 전부 필요해 - 각각 " + perEach + "개씩, 총 " + total + "개야." + waterKo;
             player.sendSystemMessage(Component.literal(companion.getName() + " (한국어): " + korean)
                     .withStyle(ChatFormatting.GRAY));
         }
     }
 
     private static void sendProgress(ServerPlayer player, AnimalCompanion companion) {
-        AnimalSpecies species = companion.getSpecies();
         String band = AnimalPrompt.currentBand();
         String waterEn = companion.stillNeedsWater() ? " We still need water too." : "";
-        String english = "Thank you! " + companion.getFoodGiven() + " of " + companion.getHerdNeed()
-                + " so far. We still need " + companion.getFoodRemaining() + " more "
-                + species.foodDisplayName() + "." + waterEn;
+        String english = "Thank you! " + foodBreakdown(companion) + "." + waterEn;
         player.sendSystemMessage(Component.literal(companion.getName() + ": " + english)
                 .withStyle(ChatFormatting.LIGHT_PURPLE));
         if (!"ADVANCED".equals(band)) {
             String waterKo = companion.stillNeedsWater() ? " 물도 아직 필요해." : "";
-            String korean = "고마워! 지금까지 " + companion.getFoodGiven() + " / " + companion.getHerdNeed()
-                    + "개야. " + companion.getFoodRemaining() + "개 더 필요해." + waterKo;
+            String korean = "고마워! 지금 상황: " + foodBreakdown(companion) + "." + waterKo;
             player.sendSystemMessage(Component.literal(companion.getName() + " (한국어): " + korean)
                     .withStyle(ChatFormatting.GRAY));
         }
@@ -461,6 +463,8 @@ public final class AnimalCommands {
                 }
                 if (companion.isCareComplete(level.getGameTime())) {
                     deliverLiberation(level, companion);
+                    // The freed herd revives the land around them: flowers and grass grow back.
+                    NatureRestoration.restoreAround(level, entity.blockPosition());
                     companion.markLiberated();
                 }
                 break;
@@ -483,11 +487,10 @@ public final class AnimalCommands {
     }
 
     private static String foodNeedSummary(AnimalCompanion companion) {
-        if (companion.getHerdNeed() <= 0) {
-            return "Now bring " + companion.getSpecies().foodDisplayName() + " for the herd.";
+        if (!companion.isPerFoodNeedSet()) {
+            return "Now bring all of: " + companion.getSpecies().foodDisplayName() + " for the herd.";
         }
-        return "Still need " + companion.getFoodRemaining() + " more "
-                + companion.getSpecies().foodDisplayName() + ".";
+        return "Still need: " + stillNeededSummary(companion) + ".";
     }
 
     // ===================== helpers =====================
@@ -538,15 +541,58 @@ public final class AnimalCommands {
         return Math.max(1, sameKind.size());
     }
 
-    private static ItemStack findAcceptedFood(ServerPlayer player, AnimalSpecies species) {
+    /** Finds an accepted food in the inventory that the herd still needs (given < perFoodNeed). */
+    private static ItemStack findNeededFood(ServerPlayer player, AnimalCompanion companion) {
+        AnimalSpecies species = companion.getSpecies();
         var inv = player.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack s = inv.getItem(i);
-            if (species.accepts(s)) {
+            if (species.accepts(s) && companion.getGiven(s.getItem()) < companion.getPerFoodNeed()) {
                 return s;
             }
         }
         return null;
+    }
+
+    private static boolean hasAnyAcceptedFood(ServerPlayer player, AnimalSpecies species) {
+        var inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (species.accepts(inv.getItem(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Readable name of a food item, e.g. "Carrot". */
+    private static String foodLabel(Item item) {
+        return new ItemStack(item).getHoverName().getString();
+    }
+
+    /** "Carrot 3/10, Potato 0/10, Beetroot 5/10" across all accepted foods. */
+    private static String foodBreakdown(AnimalCompanion companion) {
+        AnimalSpecies species = companion.getSpecies();
+        int per = companion.getPerFoodNeed();
+        StringBuilder sb = new StringBuilder();
+        for (Item food : species.acceptedFoods()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(foodLabel(food)).append(" ").append(companion.getGiven(food)).append("/").append(per);
+        }
+        return sb.toString();
+    }
+
+    /** "Carrot x7, Beetroot x10" listing only the foods still missing. */
+    private static String stillNeededSummary(AnimalCompanion companion) {
+        AnimalSpecies species = companion.getSpecies();
+        StringBuilder sb = new StringBuilder();
+        for (Item food : species.acceptedFoods()) {
+            int remaining = companion.getRemaining(food);
+            if (remaining > 0) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(foodLabel(food)).append(" x").append(remaining);
+            }
+        }
+        return sb.length() == 0 ? "nothing" : sb.toString();
     }
 
     /**

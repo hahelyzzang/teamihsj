@@ -3,8 +3,10 @@ package net.sojeong.rescuecraft.animal;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,10 +40,10 @@ public class AnimalCompanion {
     private TrustState trust = TrustState.SCARED;
     private boolean firstEncounterDone = false;
 
-    /** How many accepted food items the player has handed over so far. */
-    private int foodGiven = 0;
-    /** Total food the herd needs (herd size * itemsPerAnimal). 0 until first counted. */
-    private int herdNeed = 0;
+    /** How many of EACH accepted food the player has handed over (per item type). */
+    private final Map<Item, Integer> given = new HashMap<>();
+    /** How many of EACH accepted food the herd needs (herd size * itemsPerAnimal). 0 until counted. */
+    private int perFoodNeed = 0;
     /** Number of same-species animals counted as the herd (including this one). */
     private int herdSize = 0;
     /** Land animals: whether the player has provided the herd's water. */
@@ -143,16 +145,46 @@ public class AnimalCompanion {
         this.firstEncounterDone = true;
     }
 
-    public int getFoodGiven() {
-        return foodGiven;
-    }
-
-    public int getHerdNeed() {
-        return herdNeed;
-    }
-
     public int getHerdSize() {
         return herdSize;
+    }
+
+    /** How many of EACH accepted food the herd needs (0 until counted). */
+    public int getPerFoodNeed() {
+        return perFoodNeed;
+    }
+
+    public boolean isPerFoodNeedSet() {
+        return perFoodNeed > 0;
+    }
+
+    /** How many of the given food item have been handed over so far. */
+    public int getGiven(Item food) {
+        return given.getOrDefault(food, 0);
+    }
+
+    /** How many more of the given food item the herd still needs. */
+    public int getRemaining(Item food) {
+        return Math.max(0, perFoodNeed - getGiven(food));
+    }
+
+    public int getTotalGiven() {
+        int sum = 0;
+        for (int v : given.values()) sum += v;
+        return sum;
+    }
+
+    /** Total across every accepted food (perFoodNeed * number of food types). */
+    public int getTotalNeed() {
+        return perFoodNeed * species.acceptedFoods().size();
+    }
+
+    public int getTotalRemaining() {
+        int sum = 0;
+        for (Item food : species.acceptedFoods()) {
+            sum += getRemaining(food);
+        }
+        return sum;
     }
 
     public boolean isWatered() {
@@ -167,23 +199,31 @@ public class AnimalCompanion {
         this.taughtTip = true;
     }
 
-    /** True once the herd's food need is met AND (for land animals) water is provided. */
+    /** True once EVERY accepted food has reached its per-food need (AND, not OR). */
+    public boolean isFoodComplete() {
+        if (perFoodNeed <= 0) {
+            return false;
+        }
+        for (Item food : species.acceptedFoods()) {
+            if (getGiven(food) < perFoodNeed) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** True once every food is complete AND (for land animals) water is provided. */
     public boolean isHerdSatisfied() {
-        boolean foodOk = herdNeed > 0 && foodGiven >= herdNeed;
         boolean waterOk = !species.needsWater() || watered;
-        return foodOk && waterOk;
+        return isFoodComplete() && waterOk;
     }
 
     public boolean stillNeedsFood() {
-        return !(herdNeed > 0 && foodGiven >= herdNeed);
+        return !isFoodComplete();
     }
 
     public boolean stillNeedsWater() {
         return species.needsWater() && !watered;
-    }
-
-    public int getFoodRemaining() {
-        return Math.max(0, herdNeed - foodGiven);
     }
 
     // ---- recovery / liberation (3-day care) ----
@@ -226,15 +266,16 @@ public class AnimalCompanion {
     }
 
     /**
-     * Lock in the herd food need the first time we can count it. {@code countedHerdSize}
-     * is the number of same-species animals nearby (at least 1).
+     * Lock in the per-food need the first time we can count it. {@code countedHerdSize}
+     * is the number of same-species animals nearby (at least 1). Each accepted food
+     * then needs herdSize * itemsPerAnimal.
      */
     public void establishHerdNeed(int countedHerdSize) {
-        if (herdNeed > 0) {
+        if (perFoodNeed > 0) {
             return;
         }
         this.herdSize = Math.max(1, countedHerdSize);
-        this.herdNeed = this.herdSize * species.itemsPerAnimal();
+        this.perFoodNeed = this.herdSize * species.itemsPerAnimal();
     }
 
     public String getLastEnglish() {
@@ -251,13 +292,13 @@ public class AnimalCompanion {
     }
 
     /**
-     * Record that the player handed over one accepted food item. The first item
-     * nudges trust SCARED -> TRUSTING; satisfying the whole herd pushes trust to
-     * COMPANION. Returns the trust state BEFORE this call.
+     * Record that the player handed over one unit of the given accepted food. The
+     * first item nudges trust SCARED -> TRUSTING; satisfying the whole herd pushes
+     * trust to COMPANION. Returns the trust state BEFORE this call.
      */
-    public TrustState recordFood() {
+    public TrustState recordFood(Item food) {
         TrustState before = trust;
-        foodGiven++;
+        given.merge(food, 1, Integer::sum);
         if (trust == TrustState.SCARED) {
             trust = TrustState.TRUSTING;
         }

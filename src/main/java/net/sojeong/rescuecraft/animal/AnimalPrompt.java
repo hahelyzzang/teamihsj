@@ -103,14 +103,14 @@ public final class AnimalPrompt {
         context.append("Animal state:\n");
         context.append("- name: ").append(companion.getName()).append("\n");
         context.append("- trust: ").append(companion.getTrust().name()).append("\n");
-        context.append("- food it wants: ").append(species.foodDisplayName()).append("\n");
+        context.append("- food it needs (ALL of these): ").append(species.foodDisplayName()).append("\n");
         if (species.needsWater()) {
             context.append("- has water: ").append(companion.isWatered()).append("\n");
         }
-        context.append("- food items received so far: ").append(companion.getFoodGiven()).append("\n");
-        if (companion.getHerdNeed() > 0) {
-            context.append("- total food the herd still needs: ")
-                    .append(companion.getFoodRemaining()).append("\n");
+        if (companion.isPerFoodNeedSet()) {
+            context.append("- needs ").append(companion.getPerFoodNeed()).append(" of each food; ")
+                    .append("received ").append(companion.getTotalGiven())
+                    .append(", still needs ").append(companion.getTotalRemaining()).append(" total\n");
         }
         context.append("- first encounter happened: ").append(companion.isFirstEncounterDone()).append("\n");
         if (!companion.getLastEnglish().isBlank()) {

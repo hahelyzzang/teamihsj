@@ -26,7 +26,7 @@ public enum AnimalSpecies {
             "Bori",
             true,
             List.of(Items.CARROT, Items.POTATO, Items.BEETROOT),
-            "carrots, potatoes, or beetroots",
+            "carrots, potatoes, and beetroots",
             "당근, 감자, 비트",
             2,
             "a timid little pig who spent her whole life in a cage and is very hungry",
@@ -44,8 +44,8 @@ public enum AnimalSpecies {
             "Daisy",
             true,
             List.of(Items.WHEAT, Items.BEETROOT),
-            "wheat or beetroot",
-            "밀이나 비트",
+            "wheat and beetroot",
+            "밀과 비트",
             2,
             "a gentle, slow dairy cow who misses chewing fresh wheat",
             "1) Craft a hoe. 2) Right-click grass next to water to make farmland. "
@@ -62,8 +62,8 @@ public enum AnimalSpecies {
             "Coco",
             true,
             List.of(Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS),
-            "wheat seeds or beetroot seeds",
-            "밀 씨앗이나 비트 씨앗",
+            "wheat seeds and beetroot seeds",
+            "밀 씨앗과 비트 씨앗",
             1,
             "a small, fluffy, easily-startled chicken who loves pecking at seeds",
             "1) Punch tall grass to get wheat seeds (and harvest beetroot for beetroot seeds). "
@@ -80,8 +80,8 @@ public enum AnimalSpecies {
             "Mochi",
             true,
             List.of(Items.CARROT, Items.DANDELION),
-            "carrots or dandelions",
-            "당근이나 민들레",
+            "carrots and dandelions",
+            "당근과 민들레",
             1,
             "a shy, twitchy little rabbit who nibbles carrots and dandelions",
             "Carrots: 1) make a hoe, 2) till grass next to water, 3) plant a carrot, "
@@ -96,17 +96,15 @@ public enum AnimalSpecies {
             EntityType.HORSE,
             "Comet",
             true,
-            List.of(Items.APPLE, Items.WHEAT, Items.SUGAR),
-            "apples, wheat, or sugar",
-            "사과, 밀, 설탕",
+            List.of(Items.APPLE, Items.WHEAT),
+            "apples and wheat",
+            "사과와 밀",
             3,
             "a proud but tired horse who is comforted by sweet apples and wheat",
             "Apples: chop oak leaves and oak trees - apples drop sometimes; plant saplings for more. "
-                    + "Wheat: till grass by water, plant seeds, let it grow, then harvest. "
-                    + "Sugar: cut sugar cane that grows next to water, then craft it into sugar.",
+                    + "Wheat: till grass by water with a hoe, plant wheat seeds, let it grow golden, then harvest.",
             "사과: 참나무 잎과 나무를 베면 가끔 떨어져요. 묘목을 심어 나무를 늘려요. "
-                    + "밀: 물가 풀을 갈아 씨앗을 심고 키워서 수확해요. "
-                    + "설탕: 물가에서 자란 사탕수수를 베어 설탕으로 제작해요."
+                    + "밀: 괭이로 물가 풀을 갈아 밀 씨앗을 심고, 황금색이 되면 수확해요."
     ),
 
     // ----- Aquatic animals & the cat: fish caught by fishing -----
@@ -115,9 +113,9 @@ public enum AnimalSpecies {
             EntityType.AXOLOTL,
             "Bubbles",
             false,
-            List.of(Items.TROPICAL_FISH, Items.COD, Items.SALMON, Items.PUFFERFISH),
-            "fish (cod, salmon, tropical fish, or pufferfish)",
-            "물고기(대구, 연어, 열대어, 복어)",
+            List.of(Items.COD, Items.SALMON),
+            "cod and salmon",
+            "대구와 연어",
             2,
             "a tiny water creature who can only eat fish and is drying out",
             "To catch fish: craft a fishing rod (3 sticks + 2 string), stand by water, "
@@ -130,14 +128,14 @@ public enum AnimalSpecies {
             EntityType.TURTLE,
             "Shelly",
             false,
-            List.of(Items.SEAGRASS, Items.COD, Items.SALMON),
-            "seagrass or fish",
-            "해초나 물고기",
+            List.of(Items.COD, Items.SALMON),
+            "cod and salmon",
+            "대구와 연어",
             1,
-            "a slow sea turtle who longs for seagrass and the fish of the sea",
-            "To get food: catch fish with a fishing rod by the water, "
-                    + "or collect seagrass underwater with shears.",
-            "먹이 구하는 법: 물가에서 낚싯대로 물고기를 잡거나, 물속에서 가위로 해초를 모으세요."
+            "a slow sea turtle who longs for the fish of the sea",
+            "To get fish: craft a fishing rod (3 sticks + 2 string), stand by water, "
+                    + "right-click to cast, and reel in when the bobber dips.",
+            "물고기 잡는 법: 낚싯대(막대 3 + 실 2)를 만들어 물가에서 우클릭으로 던지고, 찌가 잠기면 낚아채세요."
     ),
 
     CAT(
@@ -145,8 +143,8 @@ public enum AnimalSpecies {
             "Whiskers",
             false,
             List.of(Items.COD, Items.SALMON),
-            "fish (cod or salmon)",
-            "물고기(대구나 연어)",
+            "cod and salmon",
+            "대구와 연어",
             2,
             "a wary, hungry cat who only trusts those who bring it fish",
             "To catch fish: craft a fishing rod (3 sticks + 2 string), stand by water, "
