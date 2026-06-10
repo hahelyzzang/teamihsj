@@ -56,22 +56,29 @@ public class OllamaEnglishEvaluator {
         return """
                 You are a CEFR English level evaluator.
 
-                Evaluate the player's English writing.
+                Below is a transcript of a player's answers to several English questions
+                of increasing difficulty (introduction, past events, opinions, and a
+                step-by-step explanation). Judge the player's OVERALL English proficiency
+                from ALL of the answers together, not just one. Weight the harder,
+                open-ended answers (reasoning and explanation) most heavily, and look at
+                grammar range, vocabulary, sentence complexity, coherence, and how well
+                they handle the more abstract questions.
+
                 Return only one of these labels:
                 A1, A2, B1, B2, C1, C2
 
                 Rules:
-                - If the response is mostly Korean and contains little English evidence, return A1.
-                - If the response uses only very simple words or memorized phrases, return A1.
-                - If the response uses basic personal sentences, return A2.
-                - If the response uses connected sentences about familiar topics, return B1.
-                - If the response gives clear explanations with some complexity, return B2.
-                - If the response is fluent, structured, and flexible, return C1.
-                - If the response is highly fluent, nuanced, and precise, return C2.
-                - Do not explain.
-                - Do not output anything except the CEFR label.
+                - If the answers are mostly Korean or empty with little English evidence, return A1.
+                - If they use only very simple words or memorized phrases, return A1.
+                - If they use basic personal sentences but struggle to explain or give reasons, return A2.
+                - If they connect sentences about familiar topics and give simple reasons, return B1.
+                - If they give clear explanations and opinions with some complexity, return B2.
+                - If they are fluent, well-structured, and flexible across all questions, return C1.
+                - If they are highly fluent, nuanced, and precise, return C2.
+                - Judge the writing itself; ignore the questions when scoring.
+                - Do not explain. Do not output anything except the single CEFR label.
 
-                Player response:
+                Player answers:
                 "%s"
                 """.formatted(playerAnswer);
     }

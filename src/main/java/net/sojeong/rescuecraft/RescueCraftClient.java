@@ -17,12 +17,26 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.phys.AABB;
 import net.sojeong.rescuecraft.animal.AnimalSpecies;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RescueCraftClient implements ClientModInitializer {
     private static boolean introStarted = false;
-    private static boolean waitingForIdentityAnswer = false;
-    private static boolean evaluatingAnswer = false;
+
+    /** Short English placement quiz, easy -> hard, used to gauge the player's level. */
+    private static final String[] QUIZ = {
+            "Question 1 of 5 - Introduce yourself: what is your name, and where are you from?",
+            "Question 2 of 5 - Tell me about something you did yesterday.",
+            "Question 3 of 5 - What do you enjoy doing in your free time, and why do you like it?",
+            "Question 4 of 5 - You find a hungry, frightened animal. Describe, step by step, what you would do to help it.",
+            "Question 5 of 5 - Some people believe keeping animals in zoos is wrong. What is your opinion, and what reasons support it?",
+    };
+
+    /** -1 = not started; 0..N-1 = waiting for that answer; N = all answered. */
+    private static int quizIndex = -1;
+    private static boolean evaluating = false;
+    private static boolean awaitingRetry = false;
+    private static final List<String> answers = new ArrayList<>();
 
     /** How close the player must be for chat to be routed to a befriended animal. */
     private static final double TALK_RANGE = 7.0;
@@ -45,15 +59,13 @@ public class RescueCraftClient implements ClientModInitializer {
 
             if (!introStarted) {
                 introStarted = true;
-                waitingForIdentityAnswer = true;
+                quizIndex = 0;
 
-                client.player.sendSystemMessage(
-                        Component.literal("[RescueCraft] Who am I in this story?")
-                );
-
-                client.player.sendSystemMessage(
-                        Component.literal("[RescueCraft] Please introduce yourself in chat.")
-                );
+                client.player.sendSystemMessage(Component.literal(
+                        "[RescueCraft] Before your journey begins, I will ask you a few short questions in English."));
+                client.player.sendSystemMessage(Component.literal(
+                        "[RescueCraft] Answer each one in chat. Your answers set how difficult the animals' English will be."));
+                client.player.sendSystemMessage(Component.literal("[RescueCraft] " + QUIZ[0]));
             }
         });
 
@@ -61,48 +73,25 @@ public class RescueCraftClient implements ClientModInitializer {
         registerRightClickInteraction();
 
         ClientSendMessageEvents.ALLOW_CHAT.register(message -> {
-            if (waitingForIdentityAnswer && !evaluatingAnswer) {
-                waitingForIdentityAnswer = false;
-                evaluatingAnswer = true;
+            Minecraft client = Minecraft.getInstance();
 
-                Minecraft client = Minecraft.getInstance();
+            // A previous evaluation failed (e.g. Ollama down); any message retries it.
+            if (awaitingRetry && !evaluating) {
+                startEvaluation(client);
+                return false;
+            }
 
-                giveGuidebookAfterAnswer(client);
-
-                if (client.player != null) {
-                    client.player.sendSystemMessage(
-                            Component.literal("[RescueCraft] I am reading your answer. Please open the guidebook while I evaluate your English level.")
-                    );
+            // Placement quiz in progress: record the answer and ask the next question.
+            if (quizIndex >= 0 && quizIndex < QUIZ.length && !evaluating) {
+                answers.add(message);
+                quizIndex++;
+                if (quizIndex < QUIZ.length) {
+                    if (client.player != null) {
+                        client.player.sendSystemMessage(Component.literal("[RescueCraft] " + QUIZ[quizIndex]));
+                    }
+                } else {
+                    startEvaluation(client);
                 }
-
-                new Thread(() -> {
-                    String level = OllamaEnglishEvaluator.evaluate(message);
-
-                    client.execute(() -> {
-                        evaluatingAnswer = false;
-
-                        if (client.player == null) {
-                            return;
-                        }
-
-                        if (level == null) {
-                            waitingForIdentityAnswer = true;
-
-                            client.player.sendSystemMessage(
-                                    Component.literal("[RescueCraft] I could not evaluate your answer. Please make sure Ollama is running, then try again.")
-                            );
-
-                            return;
-                        }
-
-                        PlayerEnglishProfile.saveLevel(level);
-
-                        client.player.sendSystemMessage(
-                                Component.literal("[RescueCraft] Your English level is: " + level)
-                        );
-                    });
-                }, "RescueCraft-Ollama-Evaluator").start();
-
                 return false;
             }
 
@@ -110,6 +99,46 @@ public class RescueCraftClient implements ClientModInitializer {
             // route their chat to that animal as a "talk" instead of broadcasting it.
             return routeChatToNearbyAnimal(message);
         });
+    }
+
+    /** Sends all collected quiz answers to the local evaluator and saves the CEFR level. */
+    private static void startEvaluation(Minecraft client) {
+        evaluating = true;
+        awaitingRetry = false;
+
+        giveGuidebookAfterAnswer(client);
+        if (client.player != null) {
+            client.player.sendSystemMessage(Component.literal(
+                    "[RescueCraft] Thank you. I am reading all your answers now - open the guidebook while I evaluate your English level."));
+        }
+
+        final String transcript = buildTranscript();
+        new Thread(() -> {
+            String level = OllamaEnglishEvaluator.evaluate(transcript);
+            client.execute(() -> {
+                evaluating = false;
+                if (client.player == null) {
+                    return;
+                }
+                if (level == null) {
+                    awaitingRetry = true;
+                    client.player.sendSystemMessage(Component.literal(
+                            "[RescueCraft] I could not evaluate your answers. Make sure Ollama is running, then type anything to try again."));
+                    return;
+                }
+                PlayerEnglishProfile.saveLevel(level);
+                client.player.sendSystemMessage(Component.literal("[RescueCraft] Your English level is: " + level));
+            });
+        }, "RescueCraft-Ollama-Evaluator").start();
+    }
+
+    private static String buildTranscript() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < answers.size(); i++) {
+            String q = i < QUIZ.length ? QUIZ[i] : ("Question " + (i + 1));
+            sb.append(q).append("\nAnswer: ").append(answers.get(i)).append("\n\n");
+        }
+        return sb.toString();
     }
 
     /**

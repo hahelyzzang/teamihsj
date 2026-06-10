@@ -8,6 +8,7 @@ import net.minecraft.server.network.Filterable;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.WrittenBookContent;
+import net.sojeong.rescuecraft.animal.AnimalBehaviorTweaks;
 import net.sojeong.rescuecraft.animal.AnimalCommands;
 import net.sojeong.rescuecraft.pig.PigCommands;
 import org.slf4j.Logger;
@@ -31,6 +32,8 @@ public class RescueCraft implements ModInitializer {
         PigCommands.register();
         // Register the /rcanimal command tree (cow, chicken, rabbit, horse NPCs).
         AnimalCommands.register();
+        // Stop rescued animals from swarming food or breeding by accident.
+        AnimalBehaviorTweaks.register();
         HungryAnimalParticles.register();
         // Speed up crop growth to ~5 minutes near players.
         CropGrowthAccelerator.register();

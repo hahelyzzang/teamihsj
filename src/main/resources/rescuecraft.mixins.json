@@ -3,7 +3,8 @@
 	"package": "net.sojeong.rescuecraft.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"ExampleMixin"
+		"ExampleMixin",
+		"MobGoalAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1
