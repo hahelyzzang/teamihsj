@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.sojeong.rescuecraft.animal.AnimalCompanion;
+import net.sojeong.rescuecraft.animal.AnimalSpecies;
 import net.sojeong.rescuecraft.pig.PigCompanion;
 
 import java.util.HashMap;
@@ -21,36 +22,19 @@ import java.util.UUID;
 
 public final class HungryAnimalParticles {
     private static final String NEED_ITEM_DISPLAY_TAG = "rescuecraft_need_item_display";
-
     private static final Map<UUID, UUID> DISPLAY_BY_ANIMAL = new HashMap<>();
-
     private static int tickCounter = 0;
 
-    private HungryAnimalParticles() {
-    }
+    private HungryAnimalParticles() {}
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            tickCounter++;
-
-            // 0.1초마다 위치/상태 갱신
-            if (tickCounter < 2) {
-                return;
-            }
-
+            if (++tickCounter < 2) return;
             tickCounter = 0;
-
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 ServerLevel level = (ServerLevel) player.level();
-
                 AABB searchArea = player.getBoundingBox().inflate(32);
-
-                List<Animal> animals = level.getEntitiesOfClass(
-                        Animal.class,
-                        searchArea,
-                        Animal::isAlive
-                );
-
+                List<Animal> animals = level.getEntitiesOfClass(Animal.class, searchArea, Animal::isAlive);
                 for (Animal animal : animals) {
                     updateItemDisplay(level, animal);
                 }
@@ -58,24 +42,85 @@ public final class HungryAnimalParticles {
         });
     }
 
+    // =================== bubble item selection ===================
+
+    /**
+     * Returns the item to show as a speech bubble, or null if no bubble needed.
+     *
+     * Convention (placeholder items — replace with custom textures later):
+     *   food+water bubble : species-specific CHESTPLATE variant
+     *   food-only bubble  : species-specific SWORD/AXE variant
+     *   water-only bubble : STRING (shared across all species)
+     */
+    private static Item getBubbleItemForAnimal(Animal animal) {
+
+        // ---- generic rescued animals ----
+        AnimalCompanion rescued = AnimalCompanion.get(animal.getUUID());
+        if (rescued != null) {
+            boolean needFood  = rescued.stillNeedsFood();
+            boolean needWater = rescued.stillNeedsWater();
+            if (!needFood && !needWater) return null;
+
+            AnimalSpecies species = rescued.getSpecies();
+            if (needFood && needWater) return foodWaterBubble(species);
+            if (needFood)              return foodBubble(species);
+            return Items.BLAZE_ROD; // water only (shared)
+        }
+
+        // ---- Bori (pig prototype) ----
+        PigCompanion companion = PigCompanion.getActive();
+        if (companion == null) return null;
+        if (!animal.getUUID().equals(companion.getPigUuid())) return null;
+
+        boolean needFood  = !companion.isFed();
+        boolean needWater = !companion.isWatered();
+        if (!needFood && !needWater) return null;
+        if (needFood && needWater) return foodWaterBubble(AnimalSpecies.PIG);
+        if (needFood)              return foodBubble(AnimalSpecies.PIG);
+        return Items.BLAZE_ROD; // water only
+    }
+
+    /** Food-only bubble item per species (sword/axe family — never normally used). */
+    private static Item foodBubble(AnimalSpecies species) {
+        return switch (species) {
+            case PIG     -> Items.IRON_SWORD;
+            case COW     -> Items.GOLDEN_SWORD;
+            case CHICKEN -> Items.WOODEN_SWORD;
+            case RABBIT  -> Items.STONE_SWORD;
+            case HORSE   -> Items.DIAMOND_SWORD;
+            case AXOLOTL -> Items.IRON_AXE;
+            case TURTLE  -> Items.GOLDEN_AXE;
+            case CAT     -> Items.STONE_AXE;
+        };
+    }
+
+    /** Food+water bubble item per species (chestplate/helmet family — never normally used). */
+    private static Item foodWaterBubble(AnimalSpecies species) {
+        return switch (species) {
+            case PIG     -> Items.IRON_CHESTPLATE;
+            case COW     -> Items.GOLDEN_CHESTPLATE;
+            case CHICKEN -> Items.LEATHER_CHESTPLATE;
+            case RABBIT  -> Items.CHAINMAIL_CHESTPLATE;
+            case HORSE   -> Items.DIAMOND_CHESTPLATE;
+            case AXOLOTL -> Items.NETHERITE_CHESTPLATE;
+            case TURTLE  -> Items.IRON_HELMET;
+            case CAT     -> Items.GOLDEN_HELMET;
+        };
+    }
+
+    // =================== display entity management ===================
+
     private static void updateItemDisplay(ServerLevel level, Animal animal) {
         Item bubbleItem = getBubbleItemForAnimal(animal);
-
-        // 표시할 말풍선이 없으면 기존 display 제거
         if (bubbleItem == null) {
             removeDisplay(level, animal);
             return;
         }
-
         Display.ItemDisplay display = getOrCreateDisplay(level, animal);
-
-        if (display == null) {
-            return;
-        }
+        if (display == null) return;
 
         display.setItemStack(new ItemStack(bubbleItem));
         display.setItemTransform(ItemDisplayContext.GUI);
-
         display.setNoGravity(true);
         display.setInvulnerable(true);
         display.setCustomNameVisible(false);
@@ -84,61 +129,7 @@ public final class HungryAnimalParticles {
         double x = animal.getX();
         double y = animal.getY() + animal.getBbHeight() + 0.85;
         double z = animal.getZ();
-
         display.teleportTo(x, y, z);
-    }
-
-    private static Item getBubbleItemForAnimal(Animal animal) {
-        // 범용 구조 동물(소/닭/토끼/말/아홀로틀/거북/고양이):
-        // 무리에게 줄 먹이/물이 충분해질 때까지 말풍선 표시
-        AnimalCompanion rescued = AnimalCompanion.get(animal.getUUID());
-        if (rescued != null) {
-            boolean needFood = rescued.stillNeedsFood();
-            boolean needWater = rescued.stillNeedsWater();
-            if (needFood && needWater) {
-                return Items.PAPER;   // foodwater_bubble
-            }
-            if (needFood) {
-                return Items.STICK;   // food_bubble
-            }
-            if (needWater) {
-                return Items.STRING;  // water_bubble
-            }
-            return null;
-        }
-
-        PigCompanion companion = PigCompanion.getActive();
-
-        // 아직 Bori가 등록되지 않았으면 아무 말풍선도 표시하지 않음
-        if (companion == null) {
-            return null;
-        }
-
-        // Bori가 아닌 동물은 표시하지 않음
-        if (!animal.getUUID().equals(companion.getPigUuid())) {
-            return null;
-        }
-
-        boolean needFood = !companion.isFed();
-        boolean needWater = !companion.isWatered();
-
-        // 음식과 물 둘 다 필요
-        if (needFood && needWater) {
-            return Items.PAPER;   // foodwater_bubble
-        }
-
-        // 음식만 필요
-        if (needFood) {
-            return Items.STICK;   // food_bubble
-        }
-
-        // 물만 필요
-        if (needWater) {
-            return Items.STRING;  // water_bubble
-        }
-
-        // 둘 다 받았으면 말풍선 제거
-        return null;
     }
 
     private static Display.ItemDisplay getOrCreateDisplay(ServerLevel level, Animal animal) {
@@ -147,16 +138,13 @@ public final class HungryAnimalParticles {
 
         if (displayUuid != null) {
             var existing = level.getEntity(displayUuid);
-
             if (existing instanceof Display.ItemDisplay itemDisplay && existing.isAlive()) {
                 return itemDisplay;
             }
-
             DISPLAY_BY_ANIMAL.remove(animalUuid);
         }
 
         Display.ItemDisplay display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
-
         display.addTag(NEED_ITEM_DISPLAY_TAG);
         display.setNoGravity(true);
         display.setInvulnerable(true);
@@ -167,27 +155,16 @@ public final class HungryAnimalParticles {
         double x = animal.getX();
         double y = animal.getY() + animal.getBbHeight() + 0.85;
         double z = animal.getZ();
-
         display.setPos(x, y, z);
-
         level.addFreshEntity(display);
-
         DISPLAY_BY_ANIMAL.put(animalUuid, display.getUUID());
-
         return display;
     }
 
     private static void removeDisplay(ServerLevel level, Animal animal) {
         UUID displayUuid = DISPLAY_BY_ANIMAL.remove(animal.getUUID());
-
-        if (displayUuid == null) {
-            return;
-        }
-
+        if (displayUuid == null) return;
         var entity = level.getEntity(displayUuid);
-
-        if (entity != null) {
-            entity.discard();
-        }
+        if (entity != null) entity.discard();
     }
 }

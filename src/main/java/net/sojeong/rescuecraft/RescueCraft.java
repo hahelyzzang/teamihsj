@@ -28,6 +28,9 @@ public class RescueCraft implements ModInitializer {
     @Override
     public void onInitialize() {
         LOGGER.info("RescueCraft initialized!");
+        // Register server→client todo-sync packet type.
+        TodoSync.register();
+        MissionSync.register();
         // Register the /rcpig command tree (pig NPC dialogue prototype).
         PigCommands.register();
         // Register the /rcanimal command tree (cow, chicken, rabbit, horse NPCs).

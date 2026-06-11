@@ -22,6 +22,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.sojeong.rescuecraft.pig.PigConfusionDetector;
+import net.sojeong.rescuecraft.TodoSync;
+import net.sojeong.rescuecraft.MissionSync;
 
 import java.util.Comparator;
 import java.util.List;
@@ -113,7 +115,7 @@ public final class AnimalCommands {
         // Act on the representative companion with whatever the player is holding.
         ItemStack held = player.getMainHandItem();
         if (species.accepts(held)) {
-            giveFood(player, companion);
+            giveFoodItem(player, companion, held);
             return 1;
         }
         if (species.needsWater() && held.is(Items.WATER_BUCKET)) {
@@ -180,6 +182,8 @@ public final class AnimalCommands {
             speak(player, companion, AnimalPrompt.firstEncounterPlayerMessage(species), true);
         }
         showInstruction(player, companion);
+        TodoSync.syncToPlayer(player);
+        MissionSync.syncToPlayer(player);
     }
 
     // ----- talk -----
@@ -242,6 +246,40 @@ public final class AnimalCommands {
 
     // ===================== actions =====================
 
+    /** Give a specific item (from right-click held item). */
+    private static void giveFoodItem(ServerPlayer player, AnimalCompanion companion, ItemStack held) {
+        AnimalSpecies species = companion.getSpecies();
+        if (!companion.isPerFoodNeedSet()) {
+            companion.establishHerdNeed(countHerd(player, companion));
+        }
+        Item item = held.getItem();
+        if (companion.getGiven(item) >= companion.getPerFoodNeed() && companion.isPerFoodNeedSet()) {
+            sendInfo(player, companion.getName() + " already has enough " + foodLabel(item) + ". Still need: "
+                    + stillNeededSummary(companion));
+            return;
+        }
+        held.shrink(1);
+        boolean firstFood = companion.getTotalGiven() == 0;
+        TrustState before = companion.recordFood(item);
+        if (before != companion.getTrust()) {
+            sendTrustUpdate(player, companion.getName(), before.name(), companion.getTrust().name());
+        }
+        speak(player, companion,
+                "(The player just gave you a " + foodLabel(item) + ". You are grateful.)", true);
+        if (firstFood && !companion.isTaughtTip()) {
+            teachTip(player, companion);
+            announceHerdNeed(player, companion);
+            companion.markTaughtTip();
+        }
+        if (companion.isHerdSatisfied()) {
+            onSuppliesComplete(player, companion);
+        } else {
+            sendProgress(player, companion);
+        }
+        TodoSync.syncToPlayer(player);
+        MissionSync.syncToPlayer(player);
+    }
+
     private static void giveFood(ServerPlayer player, AnimalCompanion companion) {
         AnimalSpecies species = companion.getSpecies();
         if (!companion.isPerFoodNeedSet()) {
@@ -285,6 +323,8 @@ public final class AnimalCommands {
         } else {
             sendProgress(player, companion);
         }
+        TodoSync.syncToPlayer(player);
+        MissionSync.syncToPlayer(player);
     }
 
     private static void giveWater(ServerPlayer player, AnimalCompanion companion) {
@@ -315,6 +355,8 @@ public final class AnimalCommands {
         } else {
             sendInfo(player, companion.getName() + "'s herd now has water. " + foodNeedSummary(companion));
         }
+        TodoSync.syncToPlayer(player);
+        MissionSync.syncToPlayer(player);
     }
 
     // ===================== quest messaging =====================
@@ -330,10 +372,10 @@ public final class AnimalCommands {
         // Finale: the herd has been told they are free.
         if (companion.isLiberated()) {
             player.sendSystemMessage(Component.literal("[Quest] " + companion.getName()
-                    + "'s herd is free now. Thank you for restoring the wildlife!")
+                            + "'s herd is free now. Thank you for restoring the wildlife!")
                     .withStyle(ChatFormatting.GOLD));
             player.sendSystemMessage(Component.literal("[안내] " + companion.getName()
-                    + "의 무리는 이제 자유예요. 야생을 되살려줘서 고마워요!")
+                            + "의 무리는 이제 자유예요. 야생을 되살려줘서 고마워요!")
                     .withStyle(ChatFormatting.YELLOW));
             return;
         }
@@ -342,12 +384,12 @@ public final class AnimalCommands {
         if (companion.isHerdSatisfied()) {
             int daysLeft = companion.careDaysRemaining(player.level().getGameTime());
             player.sendSystemMessage(Component.literal("[Quest] " + companion.getName()
-                    + " has enough food and water. We are recovering - about " + daysLeft
-                    + " day(s) until we are well. Stay near and keep us safe!")
+                            + " has enough food and water. We are recovering - about " + daysLeft
+                            + " day(s) until we are well. Stay near and keep us safe!")
                     .withStyle(ChatFormatting.GOLD));
             player.sendSystemMessage(Component.literal("[안내] " + companion.getName()
-                    + "은(는) 먹이와 물이 충분해요. 회복 중이에요 - 약 " + daysLeft
-                    + "일 뒤면 다 나아요. 곁에서 지켜줘요!")
+                            + "은(는) 먹이와 물이 충분해요. 회복 중이에요 - 약 " + daysLeft
+                            + "일 뒤면 다 나아요. 곁에서 지켜줘요!")
                     .withStyle(ChatFormatting.YELLOW));
             return;
         }
@@ -364,12 +406,12 @@ public final class AnimalCommands {
         String progressKo = companion.getTotalGiven() > 0 ? " 진행: " + foodBreakdown(companion) + "." : "";
 
         player.sendSystemMessage(Component.literal("[Quest] " + companion.getName() + " needs ALL of: "
-                + s.foodDisplayName() + " - " + perEach + " of EACH (herd of " + herd + "), so " + total
-                + " in total. Find them " + whereEn + "." + waterEn + progressEn)
+                        + s.foodDisplayName() + " - " + perEach + " of EACH (herd of " + herd + "), so " + total
+                        + " in total. Find them " + whereEn + "." + waterEn + progressEn)
                 .withStyle(ChatFormatting.GOLD));
         player.sendSystemMessage(Component.literal("[안내] " + companion.getName() + "에게는 "
-                + s.foodDisplayKorean() + " 전부가 필요해요. 무리가 " + herd + "마리라 각각 " + perEach
-                + "개씩, 총 " + total + "개예요. " + whereKo + " 구할 수 있어요." + waterKo + progressKo)
+                        + s.foodDisplayKorean() + " 전부가 필요해요. 무리가 " + herd + "마리라 각각 " + perEach
+                        + "개씩, 총 " + total + "개예요. " + whereKo + " 구할 수 있어요." + waterKo + progressKo)
                 .withStyle(ChatFormatting.YELLOW));
     }
 
@@ -481,7 +523,7 @@ public final class AnimalCommands {
             player.sendSystemMessage(Component.literal(english).withStyle(ChatFormatting.LIGHT_PURPLE));
             player.sendSystemMessage(Component.literal(korean).withStyle(ChatFormatting.GRAY));
             player.sendSystemMessage(Component.literal("[RescueCraft] " + companion.getName()
-                    + "'s herd is ready to be freed - break the iron bars to let them out!")
+                            + "'s herd is ready to be freed - break the iron bars to let them out!")
                     .withStyle(ChatFormatting.GOLD));
         }
     }

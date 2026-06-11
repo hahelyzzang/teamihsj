@@ -4,7 +4,9 @@
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
 		"ExampleMixin",
-		"MobGoalAccessor"
+		"MobGoalAccessor",
+		"InGameHudMixin",
+		"ChatHeightMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

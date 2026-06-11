@@ -6,18 +6,9 @@ import net.minecraft.world.entity.ai.goal.BreedGoal;
 import net.minecraft.world.entity.ai.goal.FollowParentGoal;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.sojeong.rescuecraft.mixin.MobGoalAccessor;
 
-/**
- * Adjusts the vanilla AI of the rescued animal species so the rescue gameplay
- * behaves well:
- *  - removes {@link TemptGoal} so the animals do NOT swarm a player holding food
- *    (right-clicking any individual still feeds the species representative), and
- *  - removes {@link BreedGoal} / {@link FollowParentGoal} so they cannot be bred
- *    by accident while being fed.
- *
- * Goals are stripped each time a supported animal is loaded into the world.
- */
 public final class AnimalBehaviorTweaks {
 
     private AnimalBehaviorTweaks() {}
@@ -30,6 +21,11 @@ public final class AnimalBehaviorTweaks {
                         goal instanceof TemptGoal
                                 || goal instanceof BreedGoal
                                 || goal instanceof FollowParentGoal);
+
+                // Prevent chickens from laying eggs
+                if (entity instanceof Chicken chicken) {
+                    chicken.eggTime = Integer.MAX_VALUE;
+                }
             }
         });
     }

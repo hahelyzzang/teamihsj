@@ -1,5 +1,6 @@
 package net.sojeong.rescuecraft.pig;
 import net.sojeong.rescuecraft.HungryAnimalParticles;
+import net.sojeong.rescuecraft.MissionSync;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -86,6 +87,7 @@ public final class PigCommands {
         if (!companion.isFirstEncounterDone()) {
             speak(player, companion, PigPrompt.firstEncounterPlayerMessage(), true);
         }
+        MissionSync.syncToPlayer(player);
         return 1;
     }
 
