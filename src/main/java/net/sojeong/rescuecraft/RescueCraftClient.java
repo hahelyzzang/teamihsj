@@ -23,6 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RescueCraftClient implements ClientModInitializer {
+    /** Set to false to skip the English placement quiz on startup. */
+    private static final boolean QUIZ_ENABLED = true;
+
     private static boolean introStarted = false;
 
     private static final String[] QUIZ = {
@@ -65,13 +68,19 @@ public class RescueCraftClient implements ClientModInitializer {
             if (!introStarted) {
                 introStarted = true;
 
-                quizIndex = 0;
-                RescueCraftHud.setClientMission(0); // "Introduce yourself"
-                client.player.sendSystemMessage(Component.literal(
-                        "[RescueCraft] Before your journey begins, answer a few short questions in English."));
-                client.player.sendSystemMessage(Component.literal(
-                        "[RescueCraft] Your answers set how difficult the animals' English will be."));
-                client.player.sendSystemMessage(Component.literal("[RescueCraft] " + QUIZ[0]));
+                if (QUIZ_ENABLED) {
+                    quizIndex = 0;
+                    RescueCraftHud.setClientMission(0); // "Introduce yourself"
+                    client.player.sendSystemMessage(Component.literal(
+                            "[RescueCraft] Before your journey begins, answer a few short questions in English."));
+                    client.player.sendSystemMessage(Component.literal(
+                            "[RescueCraft] Your answers set how difficult the animals' English will be."));
+                    client.player.sendSystemMessage(Component.literal("[RescueCraft] " + QUIZ[0]));
+                } else {
+                    quizIndex = QUIZ.length;
+                    PlayerEnglishProfile.saveLevel("B1");
+                    RescueCraftHud.setClientMission(3); // "Befriend Bori"
+                }
             }
         });
 

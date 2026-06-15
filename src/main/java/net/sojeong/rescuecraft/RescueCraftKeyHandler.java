@@ -10,6 +10,7 @@ public final class RescueCraftKeyHandler {
     private static boolean oWasDown  = false;
     private static boolean upWasDown = false;
     private static boolean dnWasDown = false;
+    private static boolean mWasDown  = false;
 
     private RescueCraftKeyHandler() {}
 
@@ -32,6 +33,10 @@ public final class RescueCraftKeyHandler {
             if (kDown && !kWasDown) RescueCraftHud.toggleHelp();
             kWasDown = kDown;
 
+            boolean mDown = GLFW.glfwGetKey(win, GLFW.GLFW_KEY_M) == GLFW.GLFW_PRESS;
+            if (mDown && !mWasDown) RescueCraftHud.toggleMission();
+            mWasDown = mDown;
+
             boolean oDown = GLFW.glfwGetKey(win, GLFW.GLFW_KEY_O) == GLFW.GLFW_PRESS;
             if (oDown && !oWasDown) RescueCraftHud.toggleHistory();
             oWasDown = oDown;
@@ -47,6 +52,7 @@ public final class RescueCraftKeyHandler {
             } else {
                 upWasDown = false;
                 dnWasDown = false;
+                mWasDown  = false;
             }
         });
     }

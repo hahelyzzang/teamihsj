@@ -24,7 +24,8 @@ public final class RescueCraftHud {
     private static boolean todoVisible = false;
     private static boolean helpVisible = false;
     private static boolean historyVisible = false;
-    private static int historyScrollOffset = 0; // lines scrolled up from bottom
+    private static int historyScrollOffset = 0;
+    private static boolean missionVisible = true; // lines scrolled up from bottom
     private static int missionStage = 0; // 0=intro, 1=explore, 2=find Bori, 3=adopt Bori, 4+= server-driven
     private static String missionAnimalName = "the animal";
 
@@ -96,6 +97,7 @@ public final class RescueCraftHud {
     public static void toggleHelp()    { helpVisible    = !helpVisible; }
     public static void toggleHistory() { historyVisible = !historyVisible; if (!historyVisible) historyScrollOffset = 0; }
     public static boolean isHistoryVisible() { return historyVisible; }
+    public static void toggleMission() { missionVisible = !missionVisible; }
     public static void scrollHistory(double delta) { if (historyVisible) historyScrollOffset = Math.max(0, historyScrollOffset + (delta > 0 ? 1 : -1)); }
     public static void setClientMission(int stage) { missionStage = stage; }
     public static void updateMission(int stage, String animalName) { if (stage >= 0) { missionStage = stage; missionAnimalName = animalName; } }
@@ -111,11 +113,11 @@ public final class RescueCraftHud {
         Font font = mc.font;
 
         // ---- key hint (bottom-right) ----
-        String hint = "§7Todo=§fJ  §7Commands=§fK  §7History=§fO";
+        String hint = "§7Todo=§fJ  §7Commands=§fK  §7History=§fO  §7Mission=§fM";
         gfx.text(font, hint, sw - font.width(hint) - PAD, sh - font.lineHeight - PAD, COL_HINT, true);
 
         // ---- mission banner (top-center) ----
-        drawMission(gfx, font, sw);
+        if (missionVisible) drawMission(gfx, font, sw);
 
         // ---- todo panel (top-right) ----
         if (todoVisible && !entries.isEmpty()) {
