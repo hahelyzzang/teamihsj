@@ -78,7 +78,6 @@ public final class AnimalCommands {
                         .then(Commands.literal("give").executes(AnimalCommands::cmdGive))
                         .then(Commands.literal("water").executes(AnimalCommands::cmdWater))
                         .then(Commands.literal("status").executes(AnimalCommands::cmdStatus))
-                        .then(Commands.literal("skipcare").executes(AnimalCommands::cmdSkipCare))
         );
     }
 
@@ -242,27 +241,6 @@ public final class AnimalCommands {
             sendInfo(player, "  food:    none given yet");
         }
         showInstruction(player, companion);
-        return 1;
-    }
-
-    // ----- skipcare (testing: free the herd immediately) -----
-
-    private static int cmdSkipCare(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = playerOrNull(ctx);
-        if (player == null) return 0;
-        AnimalCompanion companion = targetCompanion(player);
-        if (companion == null) return 0;
-        if (companion.isLiberated()) {
-            sendInfo(player, companion.getName() + "'s herd is already free.");
-            return 1;
-        }
-        ServerLevel level = (ServerLevel) player.level();
-        companion.markSatisfied(level.getGameTime());
-        deliverLiberation(level, companion);
-        Entity self = level.getEntity(companion.getAnimalUuid());
-        NatureRestoration.restoreAround(level, self != null ? self.blockPosition() : player.blockPosition());
-        companion.markLiberated();
-        sendInfo(player, "[debug] Skipped the 3-day care timer for " + companion.getName() + ".");
         return 1;
     }
 
