@@ -80,14 +80,7 @@ public final class HungryAnimalParticles {
         return Items.BLAZE_ROD; // water only
     }
 
-    /** Food-only bubble item per species.
-     *  Same food group = same item so the same texture can be reused.
-     *  carrot group  (Pig, Rabbit)          -> IRON_SWORD
-     *  wheat group   (Cow)                  -> GOLDEN_SWORD
-     *  seed group    (Chicken)              -> WOODEN_SWORD
-     *  apple group   (Horse)                -> DIAMOND_SWORD
-     *  fish group    (Axolotl, Turtle, Cat) -> IRON_AXE  (shared)
-     */
+    /** Food-only bubble item per species (sword/axe family — never normally used). */
     private static Item foodBubble(AnimalSpecies species) {
         return switch (species) {
             case PIG     -> Items.IRON_SWORD;
@@ -95,17 +88,13 @@ public final class HungryAnimalParticles {
             case CHICKEN -> Items.WOODEN_SWORD;
             case RABBIT  -> Items.STONE_SWORD;
             case HORSE   -> Items.DIAMOND_SWORD;
-            case AXOLOTL, TURTLE, CAT -> Items.IRON_AXE; // fish group (shared)
+            case AXOLOTL -> Items.IRON_AXE;
+            case TURTLE  -> Items.GOLDEN_AXE;
+            case CAT     -> Items.STONE_AXE;
         };
     }
 
-    /** Food+water bubble item per species.
-     *  carrot group  (Pig, Rabbit)          -> IRON_CHESTPLATE
-     *  wheat group   (Cow)                  -> GOLDEN_CHESTPLATE
-     *  seed group    (Chicken)              -> LEATHER_CHESTPLATE
-     *  apple group   (Horse)                -> DIAMOND_CHESTPLATE
-     *  fish group    (Axolotl, Turtle, Cat) -> NETHERITE_CHESTPLATE (no water needed)
-     */
+    /** Food+water bubble item per species (chestplate/helmet family — never normally used). */
     private static Item foodWaterBubble(AnimalSpecies species) {
         return switch (species) {
             case PIG     -> Items.IRON_CHESTPLATE;
@@ -113,7 +102,9 @@ public final class HungryAnimalParticles {
             case CHICKEN -> Items.LEATHER_CHESTPLATE;
             case RABBIT  -> Items.CHAINMAIL_CHESTPLATE;
             case HORSE   -> Items.DIAMOND_CHESTPLATE;
-            case AXOLOTL, TURTLE, CAT -> Items.NETHERITE_CHESTPLATE; // fish group (shared)
+            case AXOLOTL -> Items.NETHERITE_CHESTPLATE;
+            case TURTLE  -> Items.IRON_HELMET;
+            case CAT     -> Items.GOLDEN_HELMET;
         };
     }
 
