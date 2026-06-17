@@ -62,10 +62,10 @@ public final class AnimalDialogueService {
             return parsed.isUsable() ? parsed : AnimalDialogueResponse.fallback();
 
         } catch (ConnectException e) {
-            System.out.println("[RescueCraft][Animal] Ollama is not running on localhost:11434.");
+//            System.out.println("[RescueCraft][Animal] Ollama is not running on localhost:11434.");
             return new AnimalDialogueResponse(
-                    "*The animal stares at you silently.* (Ollama not running)",
-                    "*동물이 말없이 당신을 바라본다.* (오라마 서버 실행 필요)"
+                    "*The animal stares at you silently.*",
+                    "*동물이 말없이 당신을 바라본다.*"
             );
         } catch (Exception e) {
             System.out.println("[RescueCraft][Animal] Failed to call Ollama: " + e.getMessage());

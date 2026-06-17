@@ -89,8 +89,8 @@ public final class HungryAnimalParticles {
             case RABBIT  -> Items.STONE_SWORD;
             case HORSE   -> Items.DIAMOND_SWORD;
             case AXOLOTL -> Items.IRON_AXE;
-            case TURTLE  -> Items.GOLDEN_AXE;
-            case CAT     -> Items.STONE_AXE;
+            case TURTLE  -> Items.IRON_AXE;
+            case CAT     -> Items.IRON_AXE;
         };
     }
 
@@ -103,7 +103,7 @@ public final class HungryAnimalParticles {
             case RABBIT  -> Items.CHAINMAIL_CHESTPLATE;
             case HORSE   -> Items.DIAMOND_CHESTPLATE;
             case AXOLOTL -> Items.NETHERITE_CHESTPLATE;
-            case TURTLE  -> Items.IRON_HELMET;
+            case TURTLE  -> Items.IRON_AXE;
             case CAT     -> Items.GOLDEN_HELMET;
         };
     }

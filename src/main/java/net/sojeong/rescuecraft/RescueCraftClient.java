@@ -26,7 +26,7 @@ public class RescueCraftClient implements ClientModInitializer {
     /** Set to false to skip the English placement quiz on startup. */
     private static final boolean QUIZ_ENABLED = true;
 
-    private static boolean introStarted = false;
+    private static boolean introStarted = true;
 
     private static final String[] QUIZ = {
             "Question 1 of 5 - Introduce yourself: what is your name, and where are you from?",
